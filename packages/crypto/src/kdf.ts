@@ -77,6 +77,6 @@ export async function deriveKeys(
   return { encryptionKey, authKey: toBase64(new Uint8Array(authBits)) };
 }
 
-function hkdfParams(info: string): HkdfParams {
+function hkdfParams(info: string) {
   return { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: utf8.encode(info) };
 }

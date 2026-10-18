@@ -50,3 +50,27 @@ export const sessions = sqliteTable(
 
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+
+export const vaultItems = sqliteTable(
+  "vault_items",
+  {
+    // Generated in the browser (it's bound into the ciphertext), checked to be a UUID.
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The encrypted item. Name, URL, username, password, notes and favorite are all inside.
+    data: text("data", { mode: "json" }).$type<EncryptedBlob>().notNull(),
+    // Ciphertext size in bytes, stored so plan limits can be checked with one SUM().
+    size: integer("size").notNull(),
+    // Goes up by one on every change. Edits must name the revision they're based on.
+    revision: integer("revision").notNull().default(1),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    // Set when the item is in the trash. The server knows an item is trashed, nothing more.
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [index("vault_items_user_id_idx").on(table.userId)],
+);
+
+export type VaultItemRow = typeof vaultItems.$inferSelect;

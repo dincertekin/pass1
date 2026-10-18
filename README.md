@@ -94,16 +94,16 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Keys live in memory only, never in localStorage; reloading the page locks the vault
 - **Done ✅:** register → log out → log in works in the browser
 
-### Phase 3: Vault
+### Phase 3: Vault ✅
 
-- [ ] `vault_items` table (ciphertext only) and CRUD routes, scoped to the session's user
-- [ ] Revision number per item, so a stale edit is rejected instead of overwriting newer data
-- [ ] Three-pane vault: sidebar, searchable list, item detail; stacks on mobile
-- [ ] Create, edit, delete (to Trash), favorites
-- [ ] Keyboard: `/` or `⌘K` to search, arrows to move, `Enter` to open
-- [ ] Plan limits enforced by the server on every create and edit: item count, total stored bytes, and a maximum size per item. Free plan: 500 items, 10 MB
-- [ ] Usage meter in the sidebar (e.g. "312 of 500 items")
-- **Done when:** items survive a reload, the database contains no plaintext, and item 501 on the free plan is rejected
+- [x] `vault_items` table (ciphertext only) and CRUD routes, scoped to the session's user
+- [x] Revision number per item, so a stale edit is rejected instead of overwriting newer data
+- [x] Three-pane vault: sidebar, searchable list, item detail; stacks on mobile
+- [x] Create, edit, delete (to Trash), favorites
+- [x] Keyboard: `/` or `⌘K` to search, arrows to move, `Enter` to open
+- [x] Plan limits enforced by the server on every create and edit: item count, total stored bytes, and a maximum size per item. Free plan: 500 items, 10 MB
+- [x] Usage meter in the sidebar (e.g. "312 of 500 items")
+- **Done ✅:** items survive a reload, the database contains no plaintext, and item 501 on the free plan is rejected
 
 ### Phase 4: Everyday safety
 

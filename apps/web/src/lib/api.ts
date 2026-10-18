@@ -1,9 +1,13 @@
 import {
   accountResponseSchema,
   errorResponseSchema,
+  listItemsResponseSchema,
   preloginResponseSchema,
+  vaultItemResponseSchema,
+  type CreateItemRequest,
   type ErrorCode,
   type RegisterRequest,
+  type UpdateItemRequest,
 } from "@pass1/shared";
 import type { z } from "zod";
 
@@ -55,4 +59,11 @@ export const api = {
   login: (email: string, authKey: string) => request("POST", "/auth/login", accountResponseSchema, { email, authKey }),
   logout: () => request("POST", "/auth/logout", null),
   me: () => request("GET", "/auth/me", accountResponseSchema),
+
+  listItems: () => request("GET", "/vault/items", listItemsResponseSchema),
+  createItem: (body: CreateItemRequest) => request("POST", "/vault/items", vaultItemResponseSchema, body),
+  updateItem: (id: string, body: UpdateItemRequest) => request("PUT", `/vault/items/${id}`, vaultItemResponseSchema, body),
+  trashItem: (id: string) => request("POST", `/vault/items/${id}/trash`, vaultItemResponseSchema),
+  restoreItem: (id: string) => request("POST", `/vault/items/${id}/restore`, vaultItemResponseSchema),
+  deleteItem: (id: string) => request("DELETE", `/vault/items/${id}`, null),
 };

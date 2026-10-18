@@ -20,6 +20,8 @@ export interface VaultItem {
   username?: string;
   password: string;
   notes?: string;
+  /** Kept inside the encrypted item, so the server doesn't learn which items matter most. */
+  favorite?: boolean;
 }
 
 // AES-GCM standard nonce size. A fresh random IV is generated for every encryption;

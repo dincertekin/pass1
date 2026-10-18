@@ -7,6 +7,7 @@ import {
   kdfParamsSchema,
   kdfSaltSchema,
   MAX_ITEM_CIPHERTEXT_BYTES,
+  storedSize,
 } from "./index";
 
 // These tests check that what @pass1/crypto produces is exactly what the API will accept.
@@ -71,5 +72,12 @@ describe("emailSchema", () => {
 
   it("rejects invalid addresses", () => {
     expect(emailSchema.safeParse("not-an-email").success).toBe(false);
+  });
+});
+
+describe("storedSize", () => {
+  it("returns the decoded byte length of the ciphertext", () => {
+    const blob = (bytes: number) => ({ v: 1 as const, iv: "AAAAAAAAAAAAAAAA", ciphertext: btoa("x".repeat(bytes)) });
+    for (const bytes of [1, 2, 3, 272, 1296]) expect(storedSize(blob(bytes))).toBe(bytes);
   });
 });

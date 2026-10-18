@@ -6,6 +6,7 @@ import { authRoutes } from "./auth/routes.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
 import { ApiError, registerErrorHandler } from "./errors.js";
+import { vaultRoutes } from "./vault/routes.js";
 
 export interface AppDeps {
   config: Config;
@@ -47,7 +48,7 @@ export async function buildApp(deps: AppDeps) {
 
   app.get("/health", async () => ({ status: "ok" }));
   authRoutes(app, deps);
-  // Phase 3: GET/POST/PUT/DELETE /vault/items
+  vaultRoutes(app, deps);
 
   return app;
 }

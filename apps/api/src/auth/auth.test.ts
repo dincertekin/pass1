@@ -1,24 +1,6 @@
-import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sessions, users } from "../db/schema.js";
-import { createTestApp } from "../test-helpers.js";
-
-// The server can't tell real key material from random bytes, so tests use random bytes of the
-// right sizes. That keeps them fast: no Argon2 in the browser-side sense.
-const b64 = (bytes: number) => randomBytes(bytes).toString("base64");
-
-function registerBody(email = "ada@example.com", authKey = b64(32)) {
-  return {
-    email,
-    authKey,
-    kdfSalt: b64(16),
-    kdfParams: { memoryKiB: 65536, iterations: 3, parallelism: 1 },
-    wrappedVaultKey: { v: 1, iv: b64(12), ciphertext: b64(48) },
-  };
-}
-
-const ORIGIN = { origin: "http://localhost:5173" };
-const COOKIE = "pass1_session";
+import { b64, createTestApp, ORIGIN, registerBody, SESSION_COOKIE as COOKIE } from "../test-helpers.js";
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 

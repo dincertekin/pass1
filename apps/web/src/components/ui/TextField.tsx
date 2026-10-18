@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { Eye, EyeOff } from "lucide-react";
-import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { useId, useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   label: string;
@@ -48,6 +48,26 @@ export function PasswordField({ label, hint, className, ...props }: Omit<TextFie
         </button>
       </InputFrame>
       {hint}
+    </div>
+  );
+}
+
+export function TextAreaField({ label, className, ...props }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id"> & { label: string }) {
+  const id = useId();
+  return (
+    <div className="grid gap-1.5">
+      <label htmlFor={id} className="text-[13px] font-medium">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        className={clsx(
+          "min-h-24 resize-y rounded-md border border-border-strong bg-surface px-2.5 py-2 text-text outline-none placeholder:text-muted",
+          "focus:border-accent focus:ring-3 focus:ring-accent-soft",
+          className,
+        )}
+        {...props}
+      />
     </div>
   );
 }

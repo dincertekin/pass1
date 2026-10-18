@@ -41,7 +41,7 @@ function AppRoutes() {
     case "unlocked":
       return (
         <Routes>
-          <Route path="/vault" element={<VaultScreen email={session.account.user.email} />} />
+          <Route path="/vault" element={<VaultScreen account={session.account} vaultKey={session.vaultKey} />} />
           <Route path="*" element={<Navigate to="/vault" replace />} />
         </Routes>
       );
