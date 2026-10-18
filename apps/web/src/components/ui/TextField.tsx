@@ -26,7 +26,16 @@ export function TextField({ label, mono, hint, className, ...props }: TextFieldP
 }
 
 /** A password input with a show/hide toggle. Always uses the monospace font so look-alike characters stay distinct. */
-export function PasswordField({ label, hint, className, ...props }: Omit<TextFieldProps, "type" | "mono">) {
+export function PasswordField({
+  label,
+  hint,
+  className,
+  actions,
+  ...props
+}: Omit<TextFieldProps, "type" | "mono"> & {
+  /** Extra buttons inside the field, before the show/hide toggle (e.g. the generator). */
+  actions?: ReactNode;
+}) {
   const id = useId();
   const [visible, setVisible] = useState(false);
   const Icon = visible ? EyeOff : Eye;
@@ -38,6 +47,7 @@ export function PasswordField({ label, hint, className, ...props }: Omit<TextFie
       </label>
       <InputFrame>
         <input id={id} type={visible ? "text" : "password"} className={inputClass(true, className)} {...props} />
+        {actions}
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}

@@ -6,8 +6,9 @@ import {
   unwrapVaultKey,
 } from "@pass1/crypto";
 import type { AccountResponse } from "@pass1/shared";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiRequestError } from "../lib/api";
+import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
 
 // Who is logged in, and whether the vault is open.
@@ -43,6 +44,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  // Dropping the vault key from state is what locks the vault: nothing else holds it.
+  // Stable across renders, so auto-lock's timers don't restart on every render.
+  const lock = useCallback(() => {
+    void clearClipboard();
+    setSession((current) => (current.status === "unlocked" ? { status: "locked", account: current.account } : current));
+  }, []);
+
   const actions: SessionActions = {
     async register(email, masterPassword) {
       const kdfSalt = generateSalt();
@@ -69,12 +77,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSession({ status: "unlocked", account, vaultKey });
     },
 
-    lock() {
-      if (session.status === "unlocked") setSession({ status: "locked", account: session.account });
-    },
+    lock,
 
     async logOut() {
       // Forget everything locally even if the server can't be reached.
+      void clearClipboard();
       setSession({ status: "loggedOut" });
       await api.logout().catch(() => {});
     },

@@ -1,9 +1,10 @@
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IconButton } from "../components/ui/IconButton";
+import { copySecret } from "../lib/clipboard";
 
-// Phase 4 adds clearing the clipboard after 30 seconds and a countdown toast.
-export function CopyButton({ value, label }: { value: string; label: string }) {
+/** Copies a value and clears the clipboard after the delay set in Settings. */
+export function CopyButton({ value, label, what }: { value: string; label: string; what: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -13,7 +14,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
   }, [copied]);
 
   async function copy() {
-    await navigator.clipboard.writeText(value);
+    await copySecret(value, what);
     setCopied(true);
   }
 

@@ -105,13 +105,13 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Usage meter in the sidebar (e.g. "312 of 500 items")
 - **Done ✅:** items survive a reload, the database contains no plaintext, and item 501 on the free plan is rejected
 
-### Phase 4: Everyday safety
+### Phase 4: Everyday safety ✅
 
-- [ ] Password generator (length, character sets, passphrases)
-- [ ] Auto-lock after inactivity, configurable
-- [ ] Copy with clipboard auto-clear and countdown toast
-- [ ] Settings page
-- **Done when:** a locked vault holds no keys in memory, verified by test
+- [x] Password generator (length, character sets, passphrases)
+- [x] Auto-lock after inactivity, configurable
+- [x] Copy with clipboard auto-clear and countdown toast
+- [x] Settings page
+- **Done ✅:** a locked vault holds no keys in memory, verified with Chrome heap snapshots (unlocked: vault key and item passwords present; locked: none)
 
 ### Phase 5: Account management
 
@@ -125,7 +125,7 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 - [ ] Strict Content-Security-Policy (no inline scripts or styles)
 - [ ] Switch to PostgreSQL (or MySQL): change the Drizzle dialect, regenerate migrations
-- [ ] End-to-end tests with Playwright
+- [ ] End-to-end tests with Playwright, including the heap snapshot check that a locked vault holds no keys or plaintext
 - [ ] Docker image, deployment, backups
 - [ ] Monitoring, error tracking and logs that never contain secrets
 - [ ] Backups with a tested restore

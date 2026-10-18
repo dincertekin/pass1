@@ -72,7 +72,7 @@ export function ItemDetail({ entry, onEdit, onBack, headingRef }: {
       {item ? (
         <dl className="rounded-md border border-border">
           {item.username && (
-            <Field label="Username" actions={<CopyButton value={item.username} label="Copy username" />}>
+            <Field label="Username" actions={<CopyButton value={item.username} label="Copy username" what="Username" />}>
               {item.username}
             </Field>
           )}
@@ -84,7 +84,7 @@ export function ItemDetail({ entry, onEdit, onBack, headingRef }: {
                 <IconButton label={revealed ? "Hide password" : "Show password"} onClick={() => setRevealed((r) => !r)}>
                   {revealed ? <EyeOff size={16} /> : <Eye size={16} />}
                 </IconButton>
-                <CopyButton value={item.password} label="Copy password" />
+                <CopyButton value={item.password} label="Copy password" what="Password" />
               </>
             }
           >

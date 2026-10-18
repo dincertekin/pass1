@@ -1,8 +1,12 @@
+import type { AccountResponse } from "@pass1/shared";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { ClipboardToast } from "./components/ClipboardToast";
 import { LoginScreen } from "./screens/LoginScreen";
 import { RegisterScreen } from "./screens/RegisterScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { UnlockScreen } from "./screens/UnlockScreen";
 import { VaultScreen } from "./screens/VaultScreen";
+import { useAutoLock } from "./session/auto-lock";
 import { SessionProvider, useSession } from "./session/session";
 
 export function App() {
@@ -10,6 +14,7 @@ export function App() {
     <BrowserRouter>
       <SessionProvider>
         <AppRoutes />
+        <ClipboardToast />
       </SessionProvider>
     </BrowserRouter>
   );
@@ -39,11 +44,19 @@ function AppRoutes() {
         </Routes>
       );
     case "unlocked":
-      return (
-        <Routes>
-          <Route path="/vault" element={<VaultScreen account={session.account} vaultKey={session.vaultKey} />} />
-          <Route path="*" element={<Navigate to="/vault" replace />} />
-        </Routes>
-      );
+      return <UnlockedRoutes account={session.account} vaultKey={session.vaultKey} />;
   }
+}
+
+function UnlockedRoutes({ account, vaultKey }: { account: AccountResponse; vaultKey: CryptoKey }) {
+  const { lock } = useSession();
+  useAutoLock(lock);
+
+  return (
+    <Routes>
+      <Route path="/vault" element={<VaultScreen account={account} vaultKey={vaultKey} />} />
+      <Route path="/settings" element={<SettingsScreen account={account} />} />
+      <Route path="*" element={<Navigate to="/vault" replace />} />
+    </Routes>
+  );
 }
