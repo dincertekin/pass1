@@ -30,6 +30,7 @@ export interface DerivedKeys {
 // Changing these labels changes every derived key and locks out every user.
 const ENCRYPTION_INFO = "pass1/v1/encryption";
 const AUTH_INFO = "pass1/v1/auth";
+const EXPORT_INFO = "pass1/v1/export";
 
 export function generateSalt(): string {
   return toBase64(randomBytes(SALT_LENGTH));
@@ -46,23 +47,7 @@ export async function deriveKeys(
   saltB64: string,
   params: KdfParams = DEFAULT_KDF_PARAMS,
 ): Promise<DerivedKeys> {
-  const masterKey = await argon2id({
-    password: masterPassword.normalize("NFKC"),
-    salt: fromBase64(saltB64),
-    memorySize: params.memoryKiB,
-    iterations: params.iterations,
-    parallelism: params.parallelism,
-    hashLength: 32,
-    outputType: "binary",
-  });
-
-  const hkdfKey = await crypto.subtle.importKey(
-    "raw",
-    new Uint8Array(masterKey),
-    "HKDF",
-    false,
-    ["deriveKey", "deriveBits"],
-  );
+  const hkdfKey = await stretchPassword(masterPassword, saltB64, params);
 
   const encryptionKey = await crypto.subtle.deriveKey(
     hkdfParams(ENCRYPTION_INFO),
@@ -75,6 +60,34 @@ export async function deriveKeys(
   const authBits = await crypto.subtle.deriveBits(hkdfParams(AUTH_INFO), hkdfKey, 256);
 
   return { encryptionKey, authKey: toBase64(new Uint8Array(authBits)) };
+}
+
+/**
+ * The key that encrypts an export file, from the password chosen when exporting.
+ * A different HKDF label from deriveKeys(), so even when the export password equals the
+ * master password, the export key and the vault's encryption key are unrelated.
+ */
+export async function deriveExportKey(password: string, saltB64: string, params: KdfParams): Promise<CryptoKey> {
+  const hkdfKey = await stretchPassword(password, saltB64, params);
+  return crypto.subtle.deriveKey(hkdfParams(EXPORT_INFO), hkdfKey, { name: "AES-GCM", length: 256 }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
+}
+
+/** password --Argon2id--> 32 bytes, imported as an HKDF key so it can't be read back. */
+async function stretchPassword(password: string, saltB64: string, params: KdfParams): Promise<CryptoKey> {
+  const masterKey = await argon2id({
+    password: password.normalize("NFKC"),
+    salt: fromBase64(saltB64),
+    memorySize: params.memoryKiB,
+    iterations: params.iterations,
+    parallelism: params.parallelism,
+    hashLength: 32,
+    outputType: "binary",
+  });
+
+  return crypto.subtle.importKey("raw", new Uint8Array(masterKey), "HKDF", false, ["deriveKey", "deriveBits"]);
 }
 
 function hkdfParams(info: string) {

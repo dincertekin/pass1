@@ -1,12 +1,17 @@
 import { PLANS, type AccountResponse } from "@pass1/shared";
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Logo } from "../components/Logo";
 import { AUTO_LOCK_CHOICES, CLIPBOARD_CLEAR_CHOICES, updateSettings, useSettings } from "../lib/settings";
+import { ChangePassword } from "../settings/ChangePassword";
+import { DeleteAccount } from "../settings/DeleteAccount";
+import { Devices } from "../settings/Devices";
+import { Row, Section, Select } from "../settings/layout";
+import { Transfer } from "../settings/Transfer";
 
-export function SettingsScreen({ account }: { account: AccountResponse }) {
+export function SettingsScreen({ account, vaultKey }: { account: AccountResponse; vaultKey: CryptoKey }) {
   const settings = useSettings();
+  const { email, plan } = account.user;
 
   return (
     <div className="min-h-dvh bg-bg">
@@ -41,60 +46,19 @@ export function SettingsScreen({ account }: { account: AccountResponse }) {
 
         <Section title="Account">
           <Row label="Email">
-            <span className="text-[13px]">{account.user.email}</span>
+            <span className="text-[13px]">{email}</span>
           </Row>
           <Row label="Plan">
-            <span className="text-[13px]">{PLANS[account.user.plan].name}</span>
+            <span className="text-[13px]">{PLANS[plan].name}</span>
           </Row>
         </Section>
+
+        <ChangePassword email={email} />
+        {/* A password change ends the other sessions, so reload the list when it happens. */}
+        <Devices key={account.kdfSalt} />
+        <Transfer vaultKey={vaultKey} />
+        <DeleteAccount email={email} />
       </main>
     </div>
-  );
-}
-
-function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
-  return (
-    <section className="grid gap-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{title}</h2>
-        {note && <p className="text-xs text-muted">{note}</p>}
-      </div>
-      <div className="divide-y divide-border rounded-lg border border-border bg-surface">{children}</div>
-    </section>
-  );
-}
-
-function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
-      <div className="grid gap-0.5">
-        <span className="text-[13px] font-medium">{label}</span>
-        {hint && <span className="text-xs text-muted">{hint}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Select<T extends number>({ label, value, options, onChange }: {
-  /** Read by screen readers; the visible label is in the row. */
-  label: string;
-  value: T;
-  options: [T, string][];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value) as T)}
-      className="h-8 rounded-md border border-border-strong bg-surface px-2 text-[13px] focus:border-accent focus:ring-3 focus:ring-accent-soft focus:outline-none"
-    >
-      {options.map(([v, text]) => (
-        <option key={v} value={v}>
-          {text}
-        </option>
-      ))}
-    </select>
   );
 }

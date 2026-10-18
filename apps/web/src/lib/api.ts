@@ -2,8 +2,10 @@ import {
   accountResponseSchema,
   errorResponseSchema,
   listItemsResponseSchema,
+  listSessionsResponseSchema,
   preloginResponseSchema,
   vaultItemResponseSchema,
+  type ChangePasswordRequest,
   type CreateItemRequest,
   type ErrorCode,
   type RegisterRequest,
@@ -29,6 +31,13 @@ export class ApiRequestError extends Error {
   }
 }
 
+// Called when the server says this session no longer exists, e.g. because it was ended from
+// another device or by a password change. The session provider logs out locally.
+let onSessionEnded: () => void = () => {};
+export function setSessionEndedHandler(handler: () => void) {
+  onSessionEnded = handler;
+}
+
 async function request<T>(method: string, path: string, schema: z.ZodType<T> | null, body?: unknown): Promise<T> {
   let res: Response;
   try {
@@ -43,7 +52,10 @@ async function request<T>(method: string, path: string, schema: z.ZodType<T> | n
 
   if (!res.ok) {
     const parsed = errorResponseSchema.safeParse(await res.json().catch(() => null));
-    if (parsed.success) throw new ApiRequestError(res.status, parsed.data.error.code, parsed.data.error.message);
+    if (parsed.success) {
+      if (parsed.data.error.code === "UNAUTHENTICATED") onSessionEnded();
+      throw new ApiRequestError(res.status, parsed.data.error.code, parsed.data.error.message);
+    }
     throw new ApiRequestError(res.status, "INTERNAL", "The server sent an unexpected response.");
   }
 
@@ -66,4 +78,10 @@ export const api = {
   trashItem: (id: string) => request("POST", `/vault/items/${id}/trash`, vaultItemResponseSchema),
   restoreItem: (id: string) => request("POST", `/vault/items/${id}/restore`, vaultItemResponseSchema),
   deleteItem: (id: string) => request("DELETE", `/vault/items/${id}`, null),
+
+  changePassword: (body: ChangePasswordRequest) => request("POST", "/account/password", accountResponseSchema, body),
+  listSessions: () => request("GET", "/account/sessions", listSessionsResponseSchema),
+  revokeSession: (id: string) => request("DELETE", `/account/sessions/${encodeURIComponent(id)}`, null),
+  revokeOtherSessions: () => request("POST", "/account/sessions/revoke-others", null),
+  deleteAccount: (authKey: string) => request("DELETE", "/account", null, { authKey }),
 };

@@ -3,10 +3,10 @@ import { z } from "zod";
 // Schemas for the encrypted data the server stores. The server can't check what's inside,
 // so it checks the shape and the sizes, nothing more.
 
-const base64 = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, "Must be base64");
+export const base64 = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, "Must be base64");
 
 /** Base64 of exactly `bytes` bytes. */
-function base64OfLength(bytes: number) {
+export function base64OfLength(bytes: number) {
   return base64.length(Math.ceil(bytes / 3) * 4);
 }
 

@@ -4,6 +4,7 @@ import {
   authKeySchema,
   emailSchema,
   encryptedBlobSchema,
+  exportFileSchema,
   kdfParamsSchema,
   kdfSaltSchema,
   MAX_ITEM_CIPHERTEXT_BYTES,
@@ -79,5 +80,24 @@ describe("storedSize", () => {
   it("returns the decoded byte length of the ciphertext", () => {
     const blob = (bytes: number) => ({ v: 1 as const, iv: "AAAAAAAAAAAAAAAA", ciphertext: btoa("x".repeat(bytes)) });
     for (const bytes of [1, 2, 3, 272, 1296]) expect(storedSize(blob(bytes))).toBe(bytes);
+  });
+});
+
+describe("exportFileSchema", () => {
+  it("accepts a real export from @pass1/crypto", async () => {
+    const { createExport } = await import("@pass1/crypto");
+    const file = await createExport([{ name: "GitHub", password: "x" }], "export password");
+    expect(exportFileSchema.safeParse(JSON.parse(JSON.stringify(file))).success).toBe(true);
+  });
+
+  it("rejects a file asking for absurd Argon2 memory", async () => {
+    const { createExport } = await import("@pass1/crypto");
+    const file = await createExport([], "export password");
+    const evil = { ...file, kdfParams: { ...file.kdfParams, memoryKiB: 64 * 1024 * 1024 } };
+    expect(exportFileSchema.safeParse(evil).success).toBe(false);
+  });
+
+  it("rejects other files", () => {
+    expect(exportFileSchema.safeParse({ format: "bitwarden" }).success).toBe(false);
   });
 });

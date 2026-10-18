@@ -88,6 +88,26 @@ export async function unwrapVaultKey(
   return vaultKey;
 }
 
+/**
+ * Re-encrypts the vault key under a new encryption key, for changing the master password.
+ * Items don't need re-encrypting: they stay encrypted with the same vault key.
+ *
+ * The vault key is non-extractable, so its raw bytes come from decrypting the stored copy.
+ * They exist only inside this function and are zeroed before it returns.
+ */
+export async function rewrapVaultKey(
+  oldEncryptionKey: CryptoKey,
+  wrappedVaultKey: EncryptedBlob,
+  newEncryptionKey: CryptoKey,
+): Promise<EncryptedBlob> {
+  const raw = await decryptBytes(oldEncryptionKey, wrappedVaultKey, VAULT_KEY_AAD);
+  try {
+    return await encryptBytes(newEncryptionKey, raw, VAULT_KEY_AAD);
+  } finally {
+    raw.fill(0);
+  }
+}
+
 export async function encryptItem(vaultKey: CryptoKey, itemId: string, item: VaultItem): Promise<EncryptedBlob> {
   return encryptBytes(vaultKey, pad(utf8.encode(JSON.stringify(item))), itemAad(itemId));
 }
@@ -98,7 +118,8 @@ export async function decryptItem(vaultKey: CryptoKey, itemId: string, blob: Enc
 }
 
 /** [4-byte big-endian length][data][zero bytes up to a multiple of PADDING_BLOCK] */
-function pad(data: Uint8Array): Uint8Array<ArrayBuffer> {
+/** @internal Used by export.ts. */
+export function pad(data: Uint8Array): Uint8Array<ArrayBuffer> {
   const total = Math.ceil((LENGTH_PREFIX_BYTES + data.length) / PADDING_BLOCK) * PADDING_BLOCK;
   const out = new Uint8Array(total);
   new DataView(out.buffer).setUint32(0, data.length);
@@ -106,7 +127,8 @@ function pad(data: Uint8Array): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-function unpad(padded: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
+/** @internal */
+export function unpad(padded: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
   const length = new DataView(padded.buffer, padded.byteOffset).getUint32(0);
   if (LENGTH_PREFIX_BYTES + length > padded.length) throw new DecryptionError();
   return padded.slice(LENGTH_PREFIX_BYTES, LENGTH_PREFIX_BYTES + length);
@@ -117,7 +139,8 @@ function importVaultKey(raw: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
-async function encryptBytes(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, aad: string): Promise<EncryptedBlob> {
+/** @internal */
+export async function encryptBytes(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, aad: string): Promise<EncryptedBlob> {
   const iv = randomBytes(IV_LENGTH);
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: utf8.encode(aad) },
@@ -127,7 +150,8 @@ async function encryptBytes(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, 
   return { v: FORMAT_VERSION, iv: toBase64(iv), ciphertext: toBase64(new Uint8Array(ciphertext)) };
 }
 
-async function decryptBytes(key: CryptoKey, blob: EncryptedBlob, aad: string): Promise<Uint8Array<ArrayBuffer>> {
+/** @internal */
+export async function decryptBytes(key: CryptoKey, blob: EncryptedBlob, aad: string): Promise<Uint8Array<ArrayBuffer>> {
   if (blob.v !== FORMAT_VERSION) throw new UnsupportedFormatError(blob.v);
   try {
     const plaintext = await crypto.subtle.decrypt(

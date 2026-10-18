@@ -1,3 +1,5 @@
+export { createExport, EXPORT_FORMAT, openExport } from "./export";
+export type { ExportFile } from "./export";
 export { DEFAULT_KDF_PARAMS, deriveKeys, generateSalt } from "./kdf";
 export type { DerivedKeys, KdfParams } from "./kdf";
 export {
@@ -17,6 +19,7 @@ export {
   decryptItem,
   encryptItem,
   newItemId,
+  rewrapVaultKey,
   unwrapVaultKey,
 } from "./vault";
 export type { EncryptedBlob, VaultItem } from "./vault";

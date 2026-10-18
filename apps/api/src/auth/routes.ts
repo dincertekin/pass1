@@ -71,7 +71,7 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
       throw err;
     }
 
-    startSession(db, config, reply, user.id);
+    startSession(db, config, request, reply, user.id);
     return reply.status(201).send(toAccountResponse(user));
   });
 
@@ -87,7 +87,7 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
       throw invalidCredentials();
     }
 
-    startSession(db, config, reply, user.id);
+    startSession(db, config, request, reply, user.id);
     return toAccountResponse(user);
   });
 
@@ -119,7 +119,7 @@ function kdfParamsOf(user: User) {
   return { memoryKiB: user.kdfMemoryKiB, iterations: user.kdfIterations, parallelism: user.kdfParallelism };
 }
 
-function toAccountResponse(user: User): AccountResponse {
+export function toAccountResponse(user: User): AccountResponse {
   return {
     user: { id: user.id, email: user.email, plan: user.plan },
     kdfSalt: user.kdfSalt,

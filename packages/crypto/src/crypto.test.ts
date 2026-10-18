@@ -2,15 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_KDF_PARAMS,
   DecryptionError,
+  EXPORT_FORMAT,
   FORMAT_VERSION,
   PADDING_BLOCK,
   UnsupportedFormatError,
+  createExport,
   createVaultKey,
   decryptItem,
   deriveKeys,
   encryptItem,
   generateSalt,
   newItemId,
+  openExport,
+  rewrapVaultKey,
   unwrapVaultKey,
   type EncryptedBlob,
   type KdfParams,
@@ -173,5 +177,54 @@ describe("format v1 regression vector", () => {
     const { encryptionKey } = await deriveKeys("pass1-test-vector", "AAECAwQFBgcICQoLDA0ODw==", FAST);
     const vaultKey = await unwrapVaultKey(encryptionKey, wrappedVaultKey);
     expect(await decryptItem(vaultKey, ID, blob)).toEqual({ name: "Pinned", password: "v1-format" });
+  });
+});
+
+describe("changing the master password", () => {
+  it("re-wraps the vault key so items still decrypt with the new password only", async () => {
+    const oldKeys = await deriveKeys("old password", generateSalt(), FAST);
+    const { vaultKey, wrappedVaultKey } = await createVaultKey(oldKeys.encryptionKey);
+    const blob = await encryptItem(vaultKey, ID, item);
+
+    const newKeys = await deriveKeys("new password", generateSalt(), FAST);
+    const rewrapped = await rewrapVaultKey(oldKeys.encryptionKey, wrappedVaultKey, newKeys.encryptionKey);
+
+    const unwrapped = await unwrapVaultKey(newKeys.encryptionKey, rewrapped);
+    expect(await decryptItem(unwrapped, ID, blob)).toEqual(item);
+    await expect(unwrapVaultKey(oldKeys.encryptionKey, rewrapped)).rejects.toThrow(DecryptionError);
+  });
+
+  it("refuses to re-wrap with the wrong current key", async () => {
+    const real = await deriveKeys("real", generateSalt(), FAST);
+    const wrong = await deriveKeys("wrong", generateSalt(), FAST);
+    const { wrappedVaultKey } = await createVaultKey(real.encryptionKey);
+    await expect(rewrapVaultKey(wrong.encryptionKey, wrappedVaultKey, wrong.encryptionKey)).rejects.toThrow(DecryptionError);
+  });
+});
+
+describe("export files", () => {
+  const items: VaultItem[] = [item, { name: "Bank", password: "Xp4$wN7!", favorite: true }];
+
+  it("round-trips with the export password", async () => {
+    const file = await createExport(items, "export password");
+    expect(file.format).toBe(EXPORT_FORMAT);
+    expect(JSON.stringify(file)).not.toContain("GitHub");
+    expect(await openExport(file, "export password")).toEqual(items);
+  });
+
+  it("rejects a wrong password or a modified file", async () => {
+    const file = await createExport(items, "export password");
+    await expect(openExport(file, "wrong")).rejects.toThrow(DecryptionError);
+    const tampered = { ...file, data: { ...file.data, iv: btoa("x".repeat(12)) } };
+    await expect(openExport(tampered, "export password")).rejects.toThrow(DecryptionError);
+  });
+
+  it("uses a key unrelated to the vault, even with the same password", async () => {
+    const salt = generateSalt();
+    const { encryptionKey } = await deriveKeys("same password", salt, FAST);
+    const { vaultKey } = await createVaultKey(encryptionKey);
+    const file = await createExport(items, "same password");
+    // The vault key can't open the export.
+    await expect(decryptItem(vaultKey, ID, file.data)).rejects.toThrow(DecryptionError);
   });
 });

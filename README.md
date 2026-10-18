@@ -113,13 +113,13 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Settings page
 - **Done ✅:** a locked vault holds no keys in memory, verified with Chrome heap snapshots (unlocked: vault key and item passwords present; locked: none)
 
-### Phase 5: Account management
+### Phase 5: Account management ✅
 
-- [ ] Change master password: re-wrap the vault key and end all other sessions
-- [ ] Encrypted export and import
-- [ ] Active sessions list with revoke
-- [ ] Delete account
-- **Done when:** after a password change, the old password can't log in and every item still decrypts
+- [x] Change master password: re-wrap the vault key and end all other sessions
+- [x] Encrypted export and import
+- [x] Active sessions list with revoke
+- [x] Delete account
+- **Done ✅:** after a password change, the old password can't log in and every item still decrypts
 
 ### Phase 6: Production
 

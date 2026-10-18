@@ -15,6 +15,13 @@
       "when": 1792292642552,
       "tag": "0001_vault_items",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792294088453,
+      "tag": "0002_session_details",
+      "breakpoints": true
     }
   ]
 }

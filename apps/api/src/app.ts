@@ -2,6 +2,7 @@ import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
+import { accountRoutes } from "./account/routes.js";
 import { authRoutes } from "./auth/routes.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
@@ -49,6 +50,7 @@ export async function buildApp(deps: AppDeps) {
   app.get("/health", async () => ({ status: "ok" }));
   authRoutes(app, deps);
   vaultRoutes(app, deps);
+  accountRoutes(app, deps);
 
   return app;
 }

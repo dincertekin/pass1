@@ -43,6 +43,11 @@ export const sessions = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     createdAt: createdAt(),
+    // Shown in Settings → Devices so people can tell their sessions apart.
+    userAgent: text("user_agent"),
+    // Updated at most every few minutes (see auth/sessions.ts), not on every request.
+    // Null only for sessions created before this column existed.
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
   },
   // "Log out everywhere" and password changes delete all of a user's sessions.
   (table) => [index("sessions_user_id_idx").on(table.userId)],

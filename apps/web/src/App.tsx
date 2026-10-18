@@ -55,7 +55,7 @@ function UnlockedRoutes({ account, vaultKey }: { account: AccountResponse; vault
   return (
     <Routes>
       <Route path="/vault" element={<VaultScreen account={account} vaultKey={vaultKey} />} />
-      <Route path="/settings" element={<SettingsScreen account={account} />} />
+      <Route path="/settings" element={<SettingsScreen account={account} vaultKey={vaultKey} />} />
       <Route path="*" element={<Navigate to="/vault" replace />} />
     </Routes>
   );

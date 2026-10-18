@@ -3,11 +3,12 @@ import {
   DecryptionError,
   DEFAULT_KDF_PARAMS,
   generateSalt,
+  rewrapVaultKey,
   unwrapVaultKey,
 } from "@pass1/crypto";
 import type { AccountResponse } from "@pass1/shared";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { api, ApiRequestError } from "../lib/api";
+import { api, ApiRequestError, setSessionEndedHandler } from "../lib/api";
 import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
 
@@ -29,12 +30,23 @@ interface SessionActions {
   unlock(masterPassword: string): Promise<void>;
   lock(): void;
   logOut(): Promise<void>;
+  changeMasterPassword(currentPassword: string, newPassword: string): Promise<void>;
+  deleteAccount(masterPassword: string): Promise<void>;
 }
 
 const SessionContext = createContext<(SessionActions & { session: Session }) | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>({ status: "loading" });
+
+  // If the server ends this session (from another device, or a password change elsewhere),
+  // forget the keys here too.
+  useEffect(() => {
+    setSessionEndedHandler(() => {
+      void clearClipboard();
+      setSession({ status: "loggedOut" });
+    });
+  }, []);
 
   // On page load: is there still a valid session cookie?
   useEffect(() => {
@@ -84,6 +96,37 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       void clearClipboard();
       setSession({ status: "loggedOut" });
       await api.logout().catch(() => {});
+    },
+
+    // The vault key stays the same; only its encrypted copy on the server changes. A wrong
+    // current password fails at rewrapVaultKey(), before anything is sent.
+    async changeMasterPassword(currentPassword, newPassword) {
+      if (session.status !== "unlocked") return;
+      const { account, vaultKey } = session;
+
+      const current = await deriveKeysInWorker(currentPassword, account.kdfSalt, account.kdfParams);
+      const newKdfSalt = generateSalt();
+      const next = await deriveKeysInWorker(newPassword, newKdfSalt, DEFAULT_KDF_PARAMS);
+      const newWrappedVaultKey = await rewrapVaultKey(current.encryptionKey, account.wrappedVaultKey, next.encryptionKey);
+      // Check the new copy opens before replacing the old one on the server.
+      await unwrapVaultKey(next.encryptionKey, newWrappedVaultKey);
+
+      const updated = await api.changePassword({
+        currentAuthKey: current.authKey,
+        newAuthKey: next.authKey,
+        newKdfSalt,
+        newKdfParams: DEFAULT_KDF_PARAMS,
+        newWrappedVaultKey,
+      });
+      setSession({ status: "unlocked", account: updated, vaultKey });
+    },
+
+    async deleteAccount(masterPassword) {
+      if (session.status !== "unlocked") return;
+      const { authKey } = await deriveKeysInWorker(masterPassword, session.account.kdfSalt, session.account.kdfParams);
+      await api.deleteAccount(authKey);
+      void clearClipboard();
+      setSession({ status: "loggedOut" });
     },
   };
 
