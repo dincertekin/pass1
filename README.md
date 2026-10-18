@@ -123,7 +123,8 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 ### Phase 6: Production
 
-- [ ] Strict Content-Security-Policy (no inline scripts or styles)
+- [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce), verified with zero violations in Chrome
+- [x] API under `/api`, serving the built web app from the same origin
 - [ ] Switch to PostgreSQL (or MySQL): change the Drizzle dialect, regenerate migrations
 - [ ] End-to-end tests with Playwright, including the heap snapshot check that a locked vault holds no keys or plaintext
 - [ ] Docker image, deployment, backups

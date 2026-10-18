@@ -44,12 +44,8 @@ export function registerErrorHandler(app: FastifyInstance) {
     request.log.error(err);
     return reply.status(500).send(errorBody("INTERNAL", "Something went wrong on our side."));
   });
-
-  app.setNotFoundHandler((_request, reply) => {
-    reply.status(404).send(errorBody("NOT_FOUND", "Not found."));
-  });
 }
 
-function errorBody(code: ErrorCode, message: string): ErrorResponse {
+export function errorBody(code: ErrorCode, message: string): ErrorResponse {
   return { error: { code, message } };
 }

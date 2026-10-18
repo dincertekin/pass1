@@ -15,6 +15,9 @@ const envSchema = z
     DATABASE_PATH: z.string().default("./data/pass1.db"),
     // The web app's origin. Requests that change data must come from here.
     WEB_ORIGIN: z.url().default("http://localhost:5173"),
+    // The built web app (apps/web/dist). When set, the API serves it, so app and API share one
+    // origin. Unset in development, where Vite serves the app.
+    WEB_DIST_DIR: z.string().optional(),
     // Used to derive stable fake salts for unknown emails at prelogin (see routes/auth.ts).
     PRELOGIN_SECRET: z.string().min(32).default(DEV_PRELOGIN_SECRET),
   })

@@ -18,7 +18,7 @@ function sessionCookie(res: { cookies: { name: string; value: string }[] }) {
 
 async function registered(email = "ada@example.com") {
   const body = registerBody(email);
-  const res = await post("/auth/register", body);
+  const res = await post("/api/auth/register", body);
   expect(res.statusCode).toBe(201);
   return { body, token: sessionCookie(res)!.value };
 }
@@ -26,7 +26,7 @@ async function registered(email = "ada@example.com") {
 describe("POST /auth/register", () => {
   it("creates the account, starts a session and returns what the browser needs to unlock", async () => {
     const body = registerBody();
-    const res = await post("/auth/register", body);
+    const res = await post("/api/auth/register", body);
 
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({
@@ -42,7 +42,7 @@ describe("POST /auth/register", () => {
 
   it("stores an Argon2id hash of the auth key, never the auth key itself", async () => {
     const body = registerBody();
-    await post("/auth/register", body);
+    await post("/api/auth/register", body);
 
     const user = ctx.db.select().from(users).get()!;
     expect(user.authHash).toMatch(/^\$argon2id\$/);
@@ -58,20 +58,20 @@ describe("POST /auth/register", () => {
 
   it("rejects a second account for the same email, ignoring case", async () => {
     await registered("ada@example.com");
-    const res = await post("/auth/register", registerBody("ADA@Example.com"));
+    const res = await post("/api/auth/register", registerBody("ADA@Example.com"));
     expect(res.statusCode).toBe(409);
     expect(res.json().error.code).toBe("EMAIL_TAKEN");
   });
 
   it("rejects KDF settings weaker than the minimum", async () => {
-    const res = await post("/auth/register", { ...registerBody(), kdfParams: { memoryKiB: 1024, iterations: 1, parallelism: 1 } });
+    const res = await post("/api/auth/register", { ...registerBody(), kdfParams: { memoryKiB: 1024, iterations: 1, parallelism: 1 } });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatchObject({ code: "VALIDATION_FAILED", message: expect.stringContaining("kdfParams") });
   });
 
   it("is rate limited", async () => {
-    for (let i = 0; i < 5; i++) await post("/auth/register", registerBody(`user${i}@example.com`));
-    const res = await post("/auth/register", registerBody("one-too-many@example.com"));
+    for (let i = 0; i < 5; i++) await post("/api/auth/register", registerBody(`user${i}@example.com`));
+    const res = await post("/api/auth/register", registerBody("one-too-many@example.com"));
     expect(res.statusCode).toBe(429);
     expect(res.json().error.code).toBe("RATE_LIMITED");
   });
@@ -80,14 +80,14 @@ describe("POST /auth/register", () => {
 describe("POST /auth/prelogin", () => {
   it("returns the stored salt and settings for a registered email", async () => {
     const { body } = await registered();
-    const res = await post("/auth/prelogin", { email: "ada@example.com" });
+    const res = await post("/api/auth/prelogin", { email: "ada@example.com" });
     expect(res.json()).toEqual({ kdfSalt: body.kdfSalt, kdfParams: body.kdfParams });
   });
 
   it("returns a believable, stable fake salt for an unknown email", async () => {
-    const first = (await post("/auth/prelogin", { email: "nobody@example.com" })).json();
-    const again = (await post("/auth/prelogin", { email: "nobody@example.com" })).json();
-    const other = (await post("/auth/prelogin", { email: "someone-else@example.com" })).json();
+    const first = (await post("/api/auth/prelogin", { email: "nobody@example.com" })).json();
+    const again = (await post("/api/auth/prelogin", { email: "nobody@example.com" })).json();
+    const other = (await post("/api/auth/prelogin", { email: "someone-else@example.com" })).json();
 
     expect(first).toEqual(again);
     expect(first.kdfSalt).not.toBe(other.kdfSalt);
@@ -99,7 +99,7 @@ describe("POST /auth/prelogin", () => {
 describe("POST /auth/login", () => {
   it("logs in with the right auth key", async () => {
     const { body } = await registered();
-    const res = await post("/auth/login", { email: body.email, authKey: body.authKey });
+    const res = await post("/api/auth/login", { email: body.email, authKey: body.authKey });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().wrappedVaultKey).toEqual(body.wrappedVaultKey);
@@ -108,8 +108,8 @@ describe("POST /auth/login", () => {
 
   it("gives the same answer for a wrong key and an unknown email", async () => {
     await registered();
-    const wrongKey = await post("/auth/login", { email: "ada@example.com", authKey: b64(32) });
-    const unknown = await post("/auth/login", { email: "nobody@example.com", authKey: b64(32) });
+    const wrongKey = await post("/api/auth/login", { email: "ada@example.com", authKey: b64(32) });
+    const unknown = await post("/api/auth/login", { email: "nobody@example.com", authKey: b64(32) });
 
     expect(wrongKey.statusCode).toBe(401);
     expect(unknown.statusCode).toBe(401);
@@ -119,8 +119,8 @@ describe("POST /auth/login", () => {
   });
 
   it("is rate limited", async () => {
-    for (let i = 0; i < 10; i++) await post("/auth/login", { email: "ada@example.com", authKey: b64(32) });
-    const res = await post("/auth/login", { email: "ada@example.com", authKey: b64(32) });
+    for (let i = 0; i < 10; i++) await post("/api/auth/login", { email: "ada@example.com", authKey: b64(32) });
+    const res = await post("/api/auth/login", { email: "ada@example.com", authKey: b64(32) });
     expect(res.statusCode).toBe(429);
   });
 });
@@ -128,13 +128,13 @@ describe("POST /auth/login", () => {
 describe("GET /auth/me", () => {
   it("returns the account for a valid session", async () => {
     const { token } = await registered();
-    const res = await ctx.app.inject({ method: "GET", url: "/auth/me", cookies: { [COOKIE]: token } });
+    const res = await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: token } });
     expect(res.statusCode).toBe(200);
     expect(res.json().user.email).toBe("ada@example.com");
   });
 
   it("rejects a request without a session", async () => {
-    const res = await ctx.app.inject({ method: "GET", url: "/auth/me" });
+    const res = await ctx.app.inject({ method: "GET", url: "/api/auth/me" });
     expect(res.statusCode).toBe(401);
     expect(res.json().error.code).toBe("UNAUTHENTICATED");
   });
@@ -142,7 +142,7 @@ describe("GET /auth/me", () => {
   it("rejects an expired session", async () => {
     const { token } = await registered();
     ctx.db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) }).run();
-    const res = await ctx.app.inject({ method: "GET", url: "/auth/me", cookies: { [COOKIE]: token } });
+    const res = await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: token } });
     expect(res.statusCode).toBe(401);
   });
 });
@@ -150,21 +150,21 @@ describe("GET /auth/me", () => {
 describe("POST /auth/logout", () => {
   it("ends the session so the old cookie stops working", async () => {
     const { token } = await registered();
-    const res = await ctx.app.inject({ method: "POST", url: "/auth/logout", headers: ORIGIN, cookies: { [COOKIE]: token } });
+    const res = await ctx.app.inject({ method: "POST", url: "/api/auth/logout", headers: ORIGIN, cookies: { [COOKIE]: token } });
 
     expect(res.statusCode).toBe(204);
     expect(sessionCookie(res)?.value).toBe("");
     expect(ctx.db.select().from(sessions).all()).toHaveLength(0);
 
-    const me = await ctx.app.inject({ method: "GET", url: "/auth/me", cookies: { [COOKIE]: token } });
+    const me = await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: token } });
     expect(me.statusCode).toBe(401);
   });
 });
 
 describe("request safety", () => {
   it("rejects writes without the web app's Origin", async () => {
-    const missing = await post("/auth/register", registerBody(), {});
-    const wrong = await post("/auth/register", registerBody(), { origin: "https://evil.example" });
+    const missing = await post("/api/auth/register", registerBody(), {});
+    const wrong = await post("/api/auth/register", registerBody(), { origin: "https://evil.example" });
     expect(missing.statusCode).toBe(403);
     expect(wrong.statusCode).toBe(403);
     expect(wrong.json().error.code).toBe("FORBIDDEN");
@@ -173,7 +173,7 @@ describe("request safety", () => {
   it("answers malformed JSON with the standard error shape", async () => {
     const res = await ctx.app.inject({
       method: "POST",
-      url: "/auth/login",
+      url: "/api/auth/login",
       headers: { ...ORIGIN, "content-type": "application/json" },
       payload: "{not json",
     });
@@ -188,7 +188,7 @@ describe("request safety", () => {
   });
 
   it("sends security headers", async () => {
-    const res = await ctx.app.inject({ method: "GET", url: "/health" });
+    const res = await ctx.app.inject({ method: "GET", url: "/api/health" });
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
     expect(res.headers["strict-transport-security"]).toBeDefined();
   });
