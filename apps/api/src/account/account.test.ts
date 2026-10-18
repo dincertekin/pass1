@@ -51,11 +51,11 @@ describe("POST /account/password", () => {
   });
 
   it("refuses a wrong current password and changes nothing", async () => {
-    const before = ctx.db.select().from(users).get()!;
+    const before = (await ctx.db.select().from(users))[0]!;
     const res = await ada.send("POST", "/api/account/password", changePasswordBody(b64(32)));
     expect(res.statusCode).toBe(403);
     expect(res.json().error.code).toBe("INVALID_CREDENTIALS");
-    expect(ctx.db.select().from(users).get()).toEqual(before);
+    expect((await ctx.db.select().from(users))[0]).toEqual(before);
   });
 
   it("refuses weak KDF settings for the new password", async () => {
@@ -104,7 +104,7 @@ describe("DELETE /account", () => {
   it("needs the master password", async () => {
     const res = await ada.send("DELETE", "/api/account", { authKey: b64(32) });
     expect(res.statusCode).toBe(403);
-    expect(ctx.db.select().from(users).all()).toHaveLength(1);
+    expect(await ctx.db.select().from(users)).toHaveLength(1);
   });
 
   it("deletes the user, their sessions and their items", async () => {
@@ -114,9 +114,9 @@ describe("DELETE /account", () => {
     const res = await ada.send("DELETE", "/api/account", { authKey: ada.authKey });
     expect(res.statusCode).toBe(204);
 
-    expect(ctx.db.select().from(users).where(eq(users.id, ada.userId)).all()).toHaveLength(0);
-    expect(ctx.db.select().from(sessions).where(eq(sessions.userId, ada.userId)).all()).toHaveLength(0);
-    expect(ctx.db.select().from(vaultItems).all()).toHaveLength(0);
+    expect(await ctx.db.select().from(users).where(eq(users.id, ada.userId))).toHaveLength(0);
+    expect(await ctx.db.select().from(sessions).where(eq(sessions.userId, ada.userId))).toHaveLength(0);
+    expect(await ctx.db.select().from(vaultItems)).toHaveLength(0);
     // Other users are untouched.
     expect((await eve.send("GET", "/api/auth/me")).statusCode).toBe(200);
   });

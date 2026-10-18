@@ -43,8 +43,9 @@ master password ──Argon2id(salt)──► master key (never leaves the brows
 ```
 packages/crypto   Key derivation, vault key wrapping, item encryption + tests
 packages/shared   zod schemas for API requests and responses, plan limits
-apps/api          Fastify + TypeScript REST API, Drizzle ORM on SQLite
+apps/api          Fastify + TypeScript REST API, Drizzle ORM on Postgres (PGlite in development)
 apps/web          React + TypeScript + Vite client
+apps/e2e          Playwright end-to-end tests against the production build
 ```
 
 ## Getting started
@@ -54,8 +55,9 @@ Requires Node.js 22+.
 ```bash
 npm install
 npm test            # run all tests
-npm run dev:api     # API on http://localhost:3000 (creates apps/api/data/pass1.db)
+npm run dev:api     # API on http://localhost:3000 (database in apps/api/data/pglite, no setup needed)
 npm run dev:web     # web app on http://localhost:5173
+npm run test:e2e    # builds, then runs the browser tests (uses your installed Google Chrome)
 ```
 
 ## Roadmap
@@ -75,7 +77,7 @@ Each phase ends with something that works and has tests. Don't start a phase unt
   - item ID bound as AES-GCM associated data, so the server can't swap one item's ciphertext for another's
   - padding items to fixed size buckets, so ciphertext size doesn't reveal password length
 - [x] `packages/shared`: zod schemas for every request and response, used by both the API and the web app
-- [x] Drizzle ORM on SQLite with migrations (drizzle-kit)
+- [x] Drizzle ORM with migrations (drizzle-kit); started on SQLite, moved to Postgres in Phase 6
 - [x] Tables: `users` (email, KDF salt and params, Argon2id hash of the auth key, wrapped vault key, plan) and `sessions`
 - [x] Config read from env and validated with zod at startup
 - [x] `POST /auth/prelogin`: returns the KDF salt and params; unknown emails get a stable fake salt so accounts can't be enumerated
@@ -125,8 +127,8 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 - [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce), verified with zero violations in Chrome
 - [x] API under `/api`, serving the built web app from the same origin
-- [ ] Switch to PostgreSQL (or MySQL): change the Drizzle dialect, regenerate migrations
-- [ ] End-to-end tests with Playwright, including the heap snapshot check that a locked vault holds no keys or plaintext
+- [x] Postgres everywhere: real Postgres in production, PGlite (Postgres in WebAssembly) in development and tests; CI also runs the API tests on Postgres 18
+- [x] End-to-end tests with Playwright (17 tests, every one also fails on any CSP violation), including the heap snapshot check that a locked vault holds no keys or plaintext
 - [ ] Docker image, deployment, backups
 - [ ] Monitoring, error tracking and logs that never contain secrets
 - [ ] Backups with a tested restore

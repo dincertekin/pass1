@@ -2,9 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { buildApp } from "./app.js";
-import { loadConfig } from "./config.js";
-import { createDb } from "./db/client.js";
+import { createTestApp } from "./test-helpers.js";
 
 // A stand-in for apps/web/dist.
 let distDir: string;
@@ -19,8 +17,7 @@ beforeAll(() => {
 });
 
 async function appServingWeb() {
-  const config = loadConfig({ NODE_ENV: "test", DATABASE_PATH: ":memory:", WEB_DIST_DIR: distDir });
-  return buildApp({ config, db: createDb(":memory:") });
+  return (await createTestApp({ WEB_DIST_DIR: distDir })).app;
 }
 
 describe("serving the web app", () => {

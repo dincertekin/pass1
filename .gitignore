@@ -9,3 +9,5 @@ coverage/
 data/
 *.db
 *.db-*
+playwright-report/
+test-results/

@@ -44,14 +44,14 @@ describe("POST /auth/register", () => {
     const body = registerBody();
     await post("/api/auth/register", body);
 
-    const user = ctx.db.select().from(users).get()!;
+    const user = (await ctx.db.select().from(users))[0]!;
     expect(user.authHash).toMatch(/^\$argon2id\$/);
     expect(user.authHash).not.toContain(body.authKey);
   });
 
   it("only stores the hash of the session token", async () => {
     const { token } = await registered();
-    const row = ctx.db.select().from(sessions).get()!;
+    const row = (await ctx.db.select().from(sessions))[0]!;
     expect(row.id).not.toBe(token);
     expect(row.id).toMatch(/^[0-9a-f]{64}$/);
   });
@@ -141,7 +141,7 @@ describe("GET /auth/me", () => {
 
   it("rejects an expired session", async () => {
     const { token } = await registered();
-    ctx.db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) }).run();
+    await ctx.db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) });
     const res = await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: token } });
     expect(res.statusCode).toBe(401);
   });
@@ -154,7 +154,7 @@ describe("POST /auth/logout", () => {
 
     expect(res.statusCode).toBe(204);
     expect(sessionCookie(res)?.value).toBe("");
-    expect(ctx.db.select().from(sessions).all()).toHaveLength(0);
+    expect(await ctx.db.select().from(sessions)).toHaveLength(0);
 
     const me = await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: token } });
     expect(me.statusCode).toBe(401);

@@ -20,15 +20,15 @@ export function sessionCookieName(config: Config) {
   return config.NODE_ENV === "production" ? "__Host-pass1_session" : "pass1_session";
 }
 
-export function startSession(db: Db, config: Config, request: FastifyRequest, reply: FastifyReply, userId: string) {
+export async function startSession(db: Db, config: Config, request: FastifyRequest, reply: FastifyReply, userId: string) {
   const now = new Date();
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS);
   const userAgent = request.headers["user-agent"]?.slice(0, MAX_USER_AGENT_LENGTH) ?? null;
 
   // Tidy up this user's expired sessions while we're here, so the table doesn't grow forever.
-  db.delete(sessions).where(and(eq(sessions.userId, userId), lte(sessions.expiresAt, now))).run();
-  db.insert(sessions).values({ id: hashToken(token), userId, expiresAt, userAgent, lastUsedAt: now }).run();
+  await db.delete(sessions).where(and(eq(sessions.userId, userId), lte(sessions.expiresAt, now)));
+  await db.insert(sessions).values({ id: hashToken(token), userId, expiresAt, userAgent, lastUsedAt: now });
 
   reply.setCookie(sessionCookieName(config), token, {
     path: "/",
@@ -39,9 +39,9 @@ export function startSession(db: Db, config: Config, request: FastifyRequest, re
   });
 }
 
-export function endSession(db: Db, config: Config, request: FastifyRequest, reply: FastifyReply) {
+export async function endSession(db: Db, config: Config, request: FastifyRequest, reply: FastifyReply) {
   const token = request.cookies[sessionCookieName(config)];
-  if (token) db.delete(sessions).where(eq(sessions.id, hashToken(token))).run();
+  if (token) await db.delete(sessions).where(eq(sessions.id, hashToken(token)));
   clearSessionCookie(config, reply);
 }
 
@@ -53,30 +53,33 @@ export function clearSessionCookie(config: Config, reply: FastifyReply) {
  * Returns the logged-in user and their session's ID, or throws 401.
  * Use at the top of every route that needs a user.
  */
-export function authenticate(db: Db, config: Config, request: FastifyRequest): { user: User; sessionId: string } {
+export async function authenticate(
+  db: Db,
+  config: Config,
+  request: FastifyRequest,
+): Promise<{ user: User; sessionId: string }> {
   const token = request.cookies[sessionCookieName(config)];
   if (!token) throw new ApiError(401, "UNAUTHENTICATED", "Log in to continue.");
 
   const now = new Date();
   const sessionId = hashToken(token);
-  const row = db
+  const [row] = await db
     .select({ user: users, lastUsedAt: sessions.lastUsedAt })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.id, sessionId), gt(sessions.expiresAt, now)))
-    .get();
+    .where(and(eq(sessions.id, sessionId), gt(sessions.expiresAt, now)));
 
   if (!row) throw new ApiError(401, "UNAUTHENTICATED", "Your session has expired. Log in again.");
 
-  if (!row.lastUsedAt || now.getTime() - row.lastUsedAt.getTime() > LAST_USED_PRECISION_MS) {
-    db.update(sessions).set({ lastUsedAt: now }).where(eq(sessions.id, sessionId)).run();
+  if (now.getTime() - row.lastUsedAt.getTime() > LAST_USED_PRECISION_MS) {
+    await db.update(sessions).set({ lastUsedAt: now }).where(eq(sessions.id, sessionId));
   }
   return { user: row.user, sessionId };
 }
 
 /** Shorthand for routes that only need the user. */
-export function requireUser(db: Db, config: Config, request: FastifyRequest): User {
-  return authenticate(db, config, request).user;
+export async function requireUser(db: Db, config: Config, request: FastifyRequest): Promise<User> {
+  return (await authenticate(db, config, request)).user;
 }
 
 function hashToken(token: string) {

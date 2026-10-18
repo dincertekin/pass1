@@ -21,7 +21,7 @@ async function createItem(as = ada, id: string = crypto.randomUUID()) {
 }
 
 /** Inserts items straight into the database, for limit tests that need hundreds of them. */
-function fillVault(userId: string, count: number, size = 272) {
+async function fillVault(userId: string, count: number, size = 272) {
   const now = new Date();
   const rows = Array.from({ length: count }, () => ({
     id: crypto.randomUUID(),
@@ -31,7 +31,7 @@ function fillVault(userId: string, count: number, size = 272) {
     createdAt: now,
     updatedAt: now,
   }));
-  ctx.db.insert(vaultItems).values(rows).run();
+  await ctx.db.insert(vaultItems).values(rows);
 }
 
 describe("vault items", () => {
@@ -110,14 +110,14 @@ describe("isolation between users", () => {
 
 describe("plan limits", () => {
   it("rejects item 501 on the free plan", async () => {
-    fillVault(ada.userId, 500);
+    await fillVault(ada.userId, 500);
     const res = await ada.send("POST", "/api/vault/items", { id: crypto.randomUUID(), data: blob() });
     expect(res.statusCode).toBe(403);
     expect(res.json().error).toMatchObject({ code: "PLAN_LIMIT_REACHED", message: "Your plan holds up to 500 items." });
   });
 
   it("counts items in the trash, because they're still stored", async () => {
-    fillVault(ada.userId, 499);
+    await fillVault(ada.userId, 499);
     const item = await createItem();
     await ada.send("POST", `/api/vault/items/${item.id}/trash`);
     const res = await ada.send("POST", "/api/vault/items", { id: crypto.randomUUID(), data: blob() });
@@ -125,14 +125,14 @@ describe("plan limits", () => {
   });
 
   it("allows more items on pass1 Unlimited", async () => {
-    ctx.db.update(users).set({ plan: "unlimited" }).where(eq(users.id, ada.userId)).run();
-    fillVault(ada.userId, 500);
+    await ctx.db.update(users).set({ plan: "unlimited" }).where(eq(users.id, ada.userId));
+    await fillVault(ada.userId, 500);
     await createItem();
   });
 
   it("rejects growth past the storage limit but still allows shrinking", async () => {
     const item = await createItem();
-    fillVault(ada.userId, 1, 10 * 1024 * 1024); // the account is now over 10 MB
+    await fillVault(ada.userId, 1, 10 * 1024 * 1024); // the account is now over 10 MB
 
     const grow = await ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(1024), revision: 1 });
     expect(grow.statusCode).toBe(403);
@@ -140,6 +140,28 @@ describe("plan limits", () => {
 
     const shrink = await ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(16), revision: 1 });
     expect(shrink.statusCode).toBe(200);
+  });
+});
+
+// Two requests at the same moment. On PGlite these pass trivially (it runs one query at a time);
+// on real Postgres (CI) they prove the per-user lock in vault/routes.ts works.
+describe("simultaneous writes", () => {
+  it("lets only one of two simultaneous creates take the last free slot", async () => {
+    await fillVault(ada.userId, 499);
+    const results = await Promise.all([
+      ada.send("POST", "/api/vault/items", { id: crypto.randomUUID(), data: blob() }),
+      ada.send("POST", "/api/vault/items", { id: crypto.randomUUID(), data: blob() }),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([201, 403]);
+  });
+
+  it("lets only one of two simultaneous edits of the same revision win", async () => {
+    const item = await createItem();
+    const results = await Promise.all([
+      ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 }),
+      ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 }),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
   });
 });
 
@@ -156,7 +178,7 @@ describe("what the server stores", () => {
     });
     await ada.send("POST", "/api/vault/items", { id, data });
 
-    const stored = JSON.stringify(ctx.db.select().from(vaultItems).all());
+    const stored = JSON.stringify(await ctx.db.select().from(vaultItems));
     for (const plaintext of ["Secret Bank", "secret-bank", "ada-secret-user", "hunter2-secret-password"]) {
       expect(stored).not.toContain(plaintext);
     }

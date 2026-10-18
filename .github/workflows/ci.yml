@@ -18,3 +18,52 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # The API tests again, on a real Postgres server instead of PGlite. This is where the
+  # concurrency tests actually exercise row locks, and where the production driver (pg) runs.
+  api-on-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: pass1
+          POSTGRES_PASSWORD: pass1
+          POSTGRES_DB: pass1_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pass1"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test -w @pass1/api
+        env:
+          TEST_DATABASE_URL: postgres://pass1:pass1@localhost:5432/pass1_test
+
+  # The whole app in a real browser against the production build: auth, vault, account,
+  # zero CSP violations, and the heap check that a locked vault holds no keys.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/e2e
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/e2e/playwright-report
+          retention-days: 7

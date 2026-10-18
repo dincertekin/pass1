@@ -17,6 +17,12 @@ describe("loadConfig", () => {
     expect(config.NODE_ENV).toBe("production");
   });
 
+  it("refuses relaxed rate limits in production", () => {
+    expect(() => loadConfig({ NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32), RATE_LIMITS: "relaxed" })).toThrow(
+      /RATE_LIMITS=relaxed is only for tests/,
+    );
+  });
+
   it("names every invalid variable", () => {
     expect(() => loadConfig({ PORT: "not-a-port", WEB_ORIGIN: "nope" })).toThrow(/PORT[\s\S]*WEB_ORIGIN/);
   });

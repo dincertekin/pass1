@@ -1,12 +1,27 @@
 import { randomBytes } from "node:crypto";
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
-import { createDb } from "./db/client.js";
+import { sql } from "drizzle-orm";
+import { openDatabase, type Database, type Db } from "./db/client.js";
 
-/** A fresh app with its own in-memory database, so tests never share state. */
-export async function createTestApp() {
-  const config = loadConfig({ NODE_ENV: "test", DATABASE_PATH: ":memory:" });
-  const db = createDb(config.DATABASE_PATH);
+// One in-memory Postgres (PGlite) per test file, because starting one takes a moment.
+// Every test empties it first, so tests never see each other's data.
+//
+// Set TEST_DATABASE_URL=postgres://… to run the same tests against a real Postgres server
+// (CI does). Test files then run one at a time, since they share that database.
+export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL ?? "pglite:memory";
+let shared: Database | null = null;
+
+export async function emptyTestDatabase(): Promise<Db> {
+  shared ??= await openDatabase(TEST_DATABASE_URL);
+  await shared.db.execute(sql`truncate table users, sessions, vault_items cascade`);
+  return shared.db;
+}
+
+/** A fresh app on an empty database. */
+export async function createTestApp(env: Record<string, string> = {}) {
+  const config = loadConfig({ NODE_ENV: "test", DATABASE_URL: TEST_DATABASE_URL, ...env });
+  const db = await emptyTestDatabase();
   return { app: await buildApp({ config, db }), db, config };
 }
 

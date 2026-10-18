@@ -1,19 +1,17 @@
 import { PLAN_IDS, type EncryptedBlob } from "@pass1/shared";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-// The whole database schema. After changing it, run `npm run db:generate -w @pass1/api`
+// The whole database schema (Postgres). After changing it, run `npm run db:generate -w @pass1/api`
 // to create a migration, and commit the new file in drizzle/.
 //
-// Moving to Postgres or MySQL later means rewriting this file with pgTable / mysqlTable.
-// To keep that easy: IDs are UUID strings, encrypted data is JSON, and nothing here uses
-// SQLite-only features.
+// Development and tests run the same schema on PGlite (Postgres compiled to WebAssembly),
+// so there's one dialect everywhere and no "works in development, breaks in production" surprises.
 
-const createdAt = () =>
-  integer("created_at", { mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date());
+function createdAt() {
+  return timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+}
 
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey(),
   // Stored lowercased and trimmed (see emailSchema), so the unique index catches duplicates.
   email: text("email").notNull().unique(),
@@ -27,13 +25,13 @@ export const users = sqliteTable("users", {
   kdfParallelism: integer("kdf_parallelism").notNull(),
 
   // The random vault key, encrypted with the user's encryption key. Unreadable to the server.
-  wrappedVaultKey: text("wrapped_vault_key", { mode: "json" }).$type<EncryptedBlob>().notNull(),
+  wrappedVaultKey: jsonb("wrapped_vault_key").$type<EncryptedBlob>().notNull(),
 
   plan: text("plan", { enum: PLAN_IDS }).notNull().default("free"),
   createdAt: createdAt(),
 });
 
-export const sessions = sqliteTable(
+export const sessions = pgTable(
   "sessions",
   {
     // SHA-256 of the session token in the cookie. A database leak gives no usable sessions.
@@ -41,22 +39,18 @@ export const sessions = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: createdAt(),
     // Shown in Settings → Devices so people can tell their sessions apart.
     userAgent: text("user_agent"),
     // Updated at most every few minutes (see auth/sessions.ts), not on every request.
-    // Null only for sessions created before this column existed.
-    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
   },
   // "Log out everywhere" and password changes delete all of a user's sessions.
   (table) => [index("sessions_user_id_idx").on(table.userId)],
 );
 
-export type User = typeof users.$inferSelect;
-export type Session = typeof sessions.$inferSelect;
-
-export const vaultItems = sqliteTable(
+export const vaultItems = pgTable(
   "vault_items",
   {
     // Generated in the browser (it's bound into the ciphertext), checked to be a UUID.
@@ -65,17 +59,19 @@ export const vaultItems = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     // The encrypted item. Name, URL, username, password, notes and favorite are all inside.
-    data: text("data", { mode: "json" }).$type<EncryptedBlob>().notNull(),
+    data: jsonb("data").$type<EncryptedBlob>().notNull(),
     // Ciphertext size in bytes, stored so plan limits can be checked with one SUM().
     size: integer("size").notNull(),
     // Goes up by one on every change. Edits must name the revision they're based on.
     revision: integer("revision").notNull().default(1),
     createdAt: createdAt(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     // Set when the item is in the trash. The server knows an item is trashed, nothing more.
-    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [index("vault_items_user_id_idx").on(table.userId)],
 );
 
+export type User = typeof users.$inferSelect;
+export type Session = typeof sessions.$inferSelect;
 export type VaultItemRow = typeof vaultItems.$inferSelect;

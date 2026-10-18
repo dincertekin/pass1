@@ -11,6 +11,7 @@ import { createHmac } from "node:crypto";
 import type { AppDeps } from "../app.js";
 import { users, type User } from "../db/schema.js";
 import { ApiError, parseBody } from "../errors.js";
+import { rateLimits } from "../rate-limits.js";
 import { hashAuthKey, verifyAgainstDummy, verifyAuthKey } from "./password.js";
 import { endSession, requireUser, startSession } from "./sessions.js";
 
@@ -18,15 +19,9 @@ import { endSession, requireUser, startSession } from "./sessions.js";
 // so they look exactly like a freshly registered account.
 const DEFAULT_KDF_PARAMS = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 };
 
-// Per IP address. Every guess also costs the attacker a full Argon2id run in the browser.
-const ONE_MINUTE = 60 * 1000;
-const limits = {
-  prelogin: { max: 30, timeWindow: ONE_MINUTE },
-  login: { max: 10, timeWindow: ONE_MINUTE },
-  register: { max: 5, timeWindow: 60 * ONE_MINUTE },
-};
-
 export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
+  const limits = rateLimits(config);
+
   /**
    * Step 1 of login: the browser needs the user's salt and KDF settings before it can derive
    * the auth key. Unknown emails get a fake salt computed from the email and a server secret,
@@ -34,7 +29,7 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
    */
   app.post("/auth/prelogin", { config: { rateLimit: limits.prelogin } }, async (request): Promise<PreloginResponse> => {
     const { email } = parseBody(preloginRequestSchema, request.body);
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
     if (!user) {
       return { kdfSalt: fakeSalt(email), kdfParams: DEFAULT_KDF_PARAMS };
     }
@@ -46,7 +41,7 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
 
     // This does reveal that an email is registered. Email verification (Phase 8) will fix it:
     // registering will always say "check your inbox", and the email will say what happened.
-    if (findUserByEmail(body.email)) {
+    if (await findUserByEmail(body.email)) {
       throw new ApiError(409, "EMAIL_TAKEN", "An account with this email already exists.");
     }
 
@@ -64,20 +59,20 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     };
 
     try {
-      db.insert(users).values(user).run();
+      await db.insert(users).values(user);
     } catch (err) {
       // Two registrations for the same email at the same moment: the unique index catches the second.
       if (isUniqueViolation(err)) throw new ApiError(409, "EMAIL_TAKEN", "An account with this email already exists.");
       throw err;
     }
 
-    startSession(db, config, request, reply, user.id);
+    await startSession(db, config, request, reply, user.id);
     return reply.status(201).send(toAccountResponse(user));
   });
 
   app.post("/auth/login", { config: { rateLimit: limits.login } }, async (request, reply): Promise<AccountResponse> => {
     const { email, authKey } = parseBody(loginRequestSchema, request.body);
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
 
     if (!user) {
       await verifyAgainstDummy(authKey);
@@ -87,22 +82,23 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
       throw invalidCredentials();
     }
 
-    startSession(db, config, request, reply, user.id);
+    await startSession(db, config, request, reply, user.id);
     return toAccountResponse(user);
   });
 
   app.post("/auth/logout", async (request, reply) => {
-    endSession(db, config, request, reply);
+    await endSession(db, config, request, reply);
     return reply.status(204).send();
   });
 
   /** After a page reload the session cookie is still there but the keys are gone. This gives the browser what it needs to unlock again. */
   app.get("/auth/me", async (request): Promise<AccountResponse> => {
-    return toAccountResponse(requireUser(db, config, request));
+    return toAccountResponse(await requireUser(db, config, request));
   });
 
-  function findUserByEmail(email: string) {
-    return db.select().from(users).where(eq(users.email, email)).get();
+  async function findUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   function fakeSalt(email: string) {
@@ -131,5 +127,6 @@ export function toAccountResponse(user: User): AccountResponse {
 function isUniqueViolation(err: unknown): boolean {
   // Drizzle wraps the driver's error, so check the cause too.
   const codeOf = (e: unknown) => (e as { code?: unknown } | undefined)?.code;
-  return [err, (err as { cause?: unknown })?.cause].some((e) => codeOf(e) === "SQLITE_CONSTRAINT_UNIQUE");
+  // 23505 is Postgres's code for unique_violation.
+  return [err, (err as { cause?: unknown })?.cause].some((e) => codeOf(e) === "23505");
 }

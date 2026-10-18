@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
-import { createDb } from "./client.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { emptyTestDatabase } from "../test-helpers.js";
+import { openDatabase, type Db } from "./client.js";
 import { sessions, users } from "./schema.js";
 
 function newUser(email = "ada@example.com") {
@@ -16,31 +17,39 @@ function newUser(email = "ada@example.com") {
   };
 }
 
-describe("database", () => {
-  it("applies migrations and stores a user with defaults", () => {
-    const db = createDb(":memory:");
-    const user = newUser();
-    db.insert(users).values(user).run();
+let db: Db;
+beforeEach(async () => {
+  db = await emptyTestDatabase();
+});
 
-    const saved = db.select().from(users).where(eq(users.id, user.id)).get();
+describe("database", () => {
+  it("applies migrations and stores a user with defaults", async () => {
+    const user = newUser();
+    await db.insert(users).values(user);
+
+    const [saved] = await db.select().from(users).where(eq(users.id, user.id));
     expect(saved?.plan).toBe("free");
     expect(saved?.wrappedVaultKey).toEqual(user.wrappedVaultKey);
     expect(saved?.createdAt).toBeInstanceOf(Date);
   });
 
-  it("rejects a second account with the same email", () => {
-    const db = createDb(":memory:");
-    db.insert(users).values(newUser()).run();
-    expect(() => db.insert(users).values(newUser()).run()).toThrow(/UNIQUE/);
+  it("rejects a second account with the same email", async () => {
+    await db.insert(users).values(newUser());
+    await expect(db.insert(users).values(newUser())).rejects.toMatchObject({ cause: { code: "23505" } });
   });
 
-  it("deletes a user's sessions when the user is deleted", () => {
-    const db = createDb(":memory:");
+  it("deletes a user's sessions when the user is deleted", async () => {
     const user = newUser();
-    db.insert(users).values(user).run();
-    db.insert(sessions).values({ id: "token-hash", userId: user.id, expiresAt: new Date(Date.now() + 60_000) }).run();
+    await db.insert(users).values(user);
+    await db.insert(sessions).values({ id: "token-hash", userId: user.id, expiresAt: new Date(Date.now() + 60_000) });
 
-    db.delete(users).where(eq(users.id, user.id)).run();
-    expect(db.select().from(sessions).all()).toHaveLength(0);
+    await db.delete(users).where(eq(users.id, user.id));
+    expect(await db.select().from(sessions)).toHaveLength(0);
+  });
+});
+
+describe("openDatabase", () => {
+  it("refuses an unknown DATABASE_URL instead of guessing", async () => {
+    await expect(openDatabase("mysql://localhost/pass1")).rejects.toThrow(/must start with postgres/);
   });
 });

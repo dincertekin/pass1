@@ -12,21 +12,22 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@fastify/cookie": "11.1.2",
     "@fastify/helmet": "13.1.1",
     "@fastify/rate-limit": "11.2.0",
     "@fastify/static": "10.1.5",
     "@node-rs/argon2": "2.2.1",
     "@pass1/shared": "*",
-    "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.3",
     "fastify": "^5.12.7",
+    "pg": "8.23.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@pass1/crypto": "*",
-    "@types/better-sqlite3": "9.6.0",
     "@types/node": "^26.6.5",
+    "@types/pg": "8.23.1",
     "drizzle-kit": "0.31.11",
     "esbuild": "0.28.2",
     "tsx": "^4.23.15",
