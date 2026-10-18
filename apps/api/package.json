@@ -4,18 +4,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "build": "node build.mjs",
+    "start": "node --env-file-if-exists=.env --enable-source-maps dist/server.js",
+    "typecheck": "tsc",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@pass1/shared": "*",
+    "better-sqlite3": "13.0.3",
+    "drizzle-orm": "0.45.3",
     "fastify": "^5.12.7",
-    "zod": "^4.6.7"
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
     "@types/node": "^26.6.5",
+    "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"

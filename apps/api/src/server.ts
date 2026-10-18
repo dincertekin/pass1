@@ -1,9 +1,12 @@
 import { buildApp } from "./app.js";
+import { loadConfig } from "./config.js";
+import { createDb } from "./db/client.js";
 
-const port = Number(process.env.PORT ?? 3000);
-const app = buildApp();
+const config = loadConfig();
+const db = createDb(config.DATABASE_PATH);
+const app = buildApp({ config, db });
 
-app.listen({ port, host: "0.0.0.0" }).catch((err) => {
+app.listen({ port: config.PORT, host: config.HOST }).catch((err) => {
   app.log.error(err);
   process.exit(1);
 });

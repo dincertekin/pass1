@@ -42,7 +42,8 @@ master password ──Argon2id(salt)──► master key (never leaves the brows
 
 ```
 packages/crypto   Key derivation, vault key wrapping, item encryption + tests
-apps/api          Fastify + TypeScript REST API
+packages/shared   zod schemas for API requests and responses, plan limits
+apps/api          Fastify + TypeScript REST API, Drizzle ORM on SQLite
 apps/web          React + TypeScript + Vite client
 ```
 
@@ -53,7 +54,7 @@ Requires Node.js 22+.
 ```bash
 npm install
 npm test            # run all tests
-npm run dev:api     # API on http://localhost:3000
+npm run dev:api     # API on http://localhost:3000 (creates apps/api/data/pass1.db)
 npm run dev:web     # web app on http://localhost:5173
 ```
 
@@ -73,10 +74,10 @@ Each phase ends with something that works and has tests. Don't start a phase unt
   - a version field in every encrypted blob, so the format can be upgraded later
   - item ID bound as AES-GCM associated data, so the server can't swap one item's ciphertext for another's
   - padding items to fixed size buckets, so ciphertext size doesn't reveal password length
-- [ ] `packages/shared`: zod schemas for every request and response, used by both the API and the web app
-- [ ] Drizzle ORM on SQLite with migrations (drizzle-kit)
-- [ ] Tables: `users` (email, KDF salt and params, Argon2id hash of the auth key, wrapped vault key, plan) and `sessions`
-- [ ] Config read from env and validated with zod at startup
+- [x] `packages/shared`: zod schemas for every request and response, used by both the API and the web app
+- [x] Drizzle ORM on SQLite with migrations (drizzle-kit)
+- [x] Tables: `users` (email, KDF salt and params, Argon2id hash of the auth key, wrapped vault key, plan) and `sessions`
+- [x] Config read from env and validated with zod at startup
 - [ ] `POST /auth/prelogin`: returns the KDF salt and params; unknown emails get a stable fake salt so accounts can't be enumerated
 - [ ] `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`
 - [ ] Sessions: random token in an httpOnly, Secure, SameSite=Strict cookie, stored hashed in the database
