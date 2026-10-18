@@ -1,0 +1,24 @@
+@import "./tokens.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  @apply bg-bg font-sans text-sm text-text antialiased;
+}
+
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-accent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

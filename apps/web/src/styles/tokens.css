@@ -1,0 +1,70 @@
+/*
+ * pass1 design tokens. This file is the single source of truth for colors, fonts and radii.
+ *
+ * Tailwind turns each token into utilities: --color-surface → bg-surface, text-surface, border-surface…
+ * Dark mode works by redefining the same variables below, so components never need `dark:` classes.
+ * Tailwind's default palette is removed on purpose: if a color isn't here, it isn't in the design.
+ */
+@import "tailwindcss";
+
+@theme {
+  --color-*: initial;
+
+  /* Neutrals lean slightly blue-green, toward the Prussian accent */
+  --color-bg: #f4f6f5;
+  --color-surface: #ffffff;
+  --color-sunken: #ecefee;
+  --color-border: #d8dddb;
+  --color-border-strong: #bcc3c1;
+  --color-text: #15191c;
+  --color-muted: #5b646a;
+
+  /* Accent: Prussian blue */
+  --color-accent: #1e4d78;
+  --color-accent-hover: #173d60;
+  --color-accent-soft: #e3ecf4;
+  --color-on-accent: #ffffff;
+
+  /* Semantic colors: only for meaning (breach, reused, strong), never decoration */
+  --color-danger: #b42318;
+  --color-danger-soft: #fbe9e7;
+  --color-warning: #8f5b00;
+  --color-warning-soft: #faf0dc;
+  --color-success: #2c7046;
+  --color-success-soft: #e5f2ea;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --shadow-pop: 0 1px 2px rgb(16 24 28 / 0.06), 0 6px 20px rgb(16 24 28 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0e1113;
+    --color-surface: #15191c;
+    --color-sunken: #0b0d0f;
+    --color-border: #262c30;
+    --color-border-strong: #353d42;
+    --color-text: #e5e9ea;
+    --color-muted: #8c969b;
+
+    --color-accent: #79aadb;
+    --color-accent-hover: #98bfe6;
+    --color-accent-soft: #17283a;
+    --color-on-accent: #0b1218;
+
+    --color-danger: #f07a6c;
+    --color-danger-soft: #3a1714;
+    --color-warning: #e2aa4c;
+    --color-warning-soft: #33250c;
+    --color-success: #6cc490;
+    --color-success-soft: #11291b;
+
+    --shadow-pop: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
+  }
+}
