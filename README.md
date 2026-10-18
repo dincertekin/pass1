@@ -85,13 +85,14 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Origin check on every request that changes data (on top of SameSite=Strict)
 - **Done ✅:** integration tests cover every route, including wrong password, duplicate email and rate limit
 
-### Phase 2: Auth UI
+### Phase 2: Auth UI ✅
 
-- [ ] Routing (React Router) and a typed API client
-- [ ] Register screen: strength meter (zxcvbn-ts) and the "no recovery" acknowledgment
-- [ ] Unlock screen with Argon2id progress state
-- [ ] Keys live in memory only, never in localStorage; reloading the page locks the vault
-- **Done when:** register → log out → log in works in the browser
+- [x] Routing (React Router) and a typed API client
+- [x] Register screen: strength meter (zxcvbn-ts) and the "no recovery" acknowledgment
+- [x] Unlock screen with Argon2id progress state
+- [x] Argon2id runs in a Web Worker so the page never freezes
+- [x] Keys live in memory only, never in localStorage; reloading the page locks the vault
+- **Done ✅:** register → log out → log in works in the browser
 
 ### Phase 3: Vault
 
