@@ -68,7 +68,7 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Crypto package with tests: Argon2id, HKDF, vault key wrapping, AES-256-GCM items
 - [x] Design tokens (Tailwind), self-hosted mono font, base components (Button, Badge, TextField, PasswordField)
 
-### Phase 1: Database and auth API
+### Phase 1: Database and auth API ✅
 
 - [x] Freeze crypto format v1 before any real data exists:
   - a version field in every encrypted blob, so the format can be upgraded later
@@ -78,11 +78,12 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Drizzle ORM on SQLite with migrations (drizzle-kit)
 - [x] Tables: `users` (email, KDF salt and params, Argon2id hash of the auth key, wrapped vault key, plan) and `sessions`
 - [x] Config read from env and validated with zod at startup
-- [ ] `POST /auth/prelogin`: returns the KDF salt and params; unknown emails get a stable fake salt so accounts can't be enumerated
-- [ ] `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`
-- [ ] Sessions: random token in an httpOnly, Secure, SameSite=Strict cookie, stored hashed in the database
-- [ ] Rate limiting on auth routes, security headers
-- **Done when:** integration tests cover every route, including wrong password, duplicate email and rate limit
+- [x] `POST /auth/prelogin`: returns the KDF salt and params; unknown emails get a stable fake salt so accounts can't be enumerated
+- [x] `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`
+- [x] Sessions: random token in an httpOnly, Secure, SameSite=Strict cookie, stored hashed in the database
+- [x] Rate limiting on auth routes, security headers
+- [x] Origin check on every request that changes data (on top of SameSite=Strict)
+- **Done ✅:** integration tests cover every route, including wrong password, duplicate email and rate limit
 
 ### Phase 2: Auth UI
 
@@ -121,7 +122,7 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 ### Phase 6: Production
 
-- [ ] Strict Content-Security-Policy (no inline scripts or styles), Origin check on writes
+- [ ] Strict Content-Security-Policy (no inline scripts or styles)
 - [ ] Switch to PostgreSQL (or MySQL): change the Drizzle dialect, regenerate migrations
 - [ ] End-to-end tests with Playwright
 - [ ] Docker image, deployment, backups

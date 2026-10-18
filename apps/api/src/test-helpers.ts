@@ -3,8 +3,8 @@ import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 
 /** A fresh app with its own in-memory database, so tests never share state. */
-export function createTestApp() {
+export async function createTestApp() {
   const config = loadConfig({ NODE_ENV: "test", DATABASE_PATH: ":memory:" });
   const db = createDb(config.DATABASE_PATH);
-  return { app: buildApp({ config, db }), db, config };
+  return { app: await buildApp({ config, db }), db, config };
 }

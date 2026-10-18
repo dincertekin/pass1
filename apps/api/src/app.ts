@@ -1,14 +1,25 @@
+import cookie from "@fastify/cookie";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
+import { authRoutes } from "./auth/routes.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
+import { ApiError, registerErrorHandler } from "./errors.js";
 
 export interface AppDeps {
   config: Config;
   db: Db;
 }
 
-export function buildApp({ config }: AppDeps) {
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+export async function buildApp(deps: AppDeps) {
+  const { config } = deps;
+
   const app = Fastify({
+    // The largest request is one encrypted item (64 KiB as base64) plus JSON around it.
+    bodyLimit: 256 * 1024,
     logger:
       config.NODE_ENV === "test"
         ? false
@@ -20,9 +31,22 @@ export function buildApp({ config }: AppDeps) {
           },
   });
 
-  app.get("/health", async () => ({ status: "ok" }));
+  registerErrorHandler(app);
+  await app.register(helmet);
+  await app.register(cookie);
+  // Off by default; each route opts in with its own limit (see auth/routes.ts).
+  await app.register(rateLimit, { global: false });
 
-  // Phase 1: POST /auth/prelogin, /auth/register, /auth/login, /auth/logout, GET /auth/me
+  // Second line of defense against cross-site requests, after SameSite=Strict cookies:
+  // anything that changes data must come from the web app's own origin.
+  app.addHook("onRequest", async (request) => {
+    if (UNSAFE_METHODS.has(request.method) && request.headers.origin !== config.WEB_ORIGIN) {
+      throw new ApiError(403, "FORBIDDEN", "Request origin not allowed.");
+    }
+  });
+
+  app.get("/health", async () => ({ status: "ok" }));
+  authRoutes(app, deps);
   // Phase 3: GET/POST/PUT/DELETE /vault/items
 
   return app;

@@ -4,7 +4,7 @@ import { createDb } from "./db/client.js";
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_PATH);
-const app = buildApp({ config, db });
+const app = await buildApp({ config, db });
 
 app.listen({ port: config.PORT, host: config.HOST }).catch((err) => {
   app.log.error(err);
