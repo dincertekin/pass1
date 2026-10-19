@@ -5,6 +5,16 @@ import { z } from "zod";
 
 const DEV_PRELOGIN_SECRET = "dev-only-prelogin-secret-do-not-use-in-production";
 
+const BILLING_KEYS = [
+  "PADDLE_API_KEY",
+  "PADDLE_WEBHOOK_SECRET",
+  "PADDLE_PRICE_PLUS_YEARLY",
+  "PADDLE_PRICE_PLUS_MONTHLY",
+  "PADDLE_PRICE_UNLIMITED_YEARLY",
+  "PADDLE_PRICE_UNLIMITED_MONTHLY",
+] as const;
+const BILLING_KEYS_LIST = BILLING_KEYS.join(", ");
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -27,6 +37,17 @@ const envSchema = z
     RATE_LIMITS: z.enum(["strict", "relaxed"]).default("strict"),
     // Used to derive stable fake salts for unknown emails at prelogin (see routes/auth.ts).
     PRELOGIN_SECRET: z.string().min(32).default(DEV_PRELOGIN_SECRET),
+
+    // Billing with Paddle (see billing/). Leave all of these unset to run without billing:
+    // the app then says upgrades aren't open yet. Setting only some of them is an error.
+    PADDLE_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
+    PADDLE_API_KEY: z.string().min(1).optional(),
+    PADDLE_WEBHOOK_SECRET: z.string().min(1).optional(),
+    // Paddle price IDs (pri_…) for each plan and billing period.
+    PADDLE_PRICE_PLUS_YEARLY: z.string().regex(/^pri_/).optional(),
+    PADDLE_PRICE_PLUS_MONTHLY: z.string().regex(/^pri_/).optional(),
+    PADDLE_PRICE_UNLIMITED_YEARLY: z.string().regex(/^pri_/).optional(),
+    PADDLE_PRICE_UNLIMITED_MONTHLY: z.string().regex(/^pri_/).optional(),
   })
   .refine((env) => env.NODE_ENV !== "production" || env.PRELOGIN_SECRET !== DEV_PRELOGIN_SECRET, {
     message: "PRELOGIN_SECRET must be set in production",
@@ -35,6 +56,14 @@ const envSchema = z
   .refine((env) => env.NODE_ENV !== "production" || env.RATE_LIMITS === "strict", {
     message: "RATE_LIMITS=relaxed is only for tests",
     path: ["RATE_LIMITS"],
+  })
+  .refine((env) => BILLING_KEYS.every((key) => env[key]) || BILLING_KEYS.every((key) => !env[key]), {
+    message: `Set all of ${BILLING_KEYS_LIST} to turn billing on, or none of them to run without it`,
+    path: ["PADDLE_API_KEY"],
+  })
+  .refine((env) => env.NODE_ENV !== "production" || !env.PADDLE_API_KEY || env.PADDLE_ENVIRONMENT === "production", {
+    message: "PADDLE_ENVIRONMENT must be production when billing is on in production",
+    path: ["PADDLE_ENVIRONMENT"],
   })
   .refine((env) => env.NODE_ENV !== "production" || /^postgres(ql)?:\/\//.test(env.DATABASE_URL), {
     message: "DATABASE_URL must be a postgres:// URL in production (PGlite is for development)",

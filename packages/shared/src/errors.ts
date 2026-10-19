@@ -11,6 +11,7 @@ export const ERROR_CODES = [
   "PLAN_LIMIT_REACHED",
   "NOT_FOUND",
   "CONFLICT",
+  "BILLING_FAILED",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

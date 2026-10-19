@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pass1 checkout</title>
+    <!--
+      pass1's checkout page, served on its own origin (pay.<domain>) by Caddy, never on the app's.
+      Paddle's script runs here, so it can't reach the page where vaults are decrypted.
+      Caddy fills in these values from its environment (see deploy/Caddyfile).
+    -->
+    <meta name="paddle-environment" content='{{env "PADDLE_ENVIRONMENT"}}' />
+    <meta name="paddle-client-token" content='{{env "PADDLE_CLIENT_TOKEN"}}' />
+    <meta name="app-url" content='{{env "PUBLIC_URL"}}' />
+    <link rel="stylesheet" href="/checkout.css" />
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+    <script src="/checkout.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <p class="brand"><span class="mark">1</span> pass1</p>
+      <p id="status">Opening secure checkout…</p>
+      <p class="note">Payments are handled by Paddle. pass1 never sees your card details.</p>
+      <p><a id="back" href="/">Back to pass1</a></p>
+    </main>
+  </body>
+</html>

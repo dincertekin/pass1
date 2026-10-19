@@ -99,9 +99,16 @@ test("the plans dialog shows prices and explains that upgrades aren't open yet",
   await page.getByRole("button", { name: "Get pass1 Plus →" }).click();
   const dialog = page.getByRole("dialog", { name: "pass1 plans" });
   await expect(dialog.getByText("Your plan")).toBeVisible();
-  await expect(dialog.getByText("$19")).toBeVisible();
-  await expect(dialog.getByText("$39")).toBeVisible();
-  await expect(dialog.getByText("or $2.49 billed monthly")).toBeVisible();
+  // Yearly first, with the monthly equivalent; the toggle switches to monthly prices.
+  await expect(dialog.getByText("$19", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("$39", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("$1.58 a month, billed yearly")).toBeVisible();
+  await dialog.getByRole("button", { name: "Monthly" }).click();
+  await expect(dialog.getByText("$2.49", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("$4.49", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("or $19 billed yearly")).toBeVisible();
+  // Without billing configured there's nothing to buy yet.
+  await expect(dialog.getByRole("button", { name: /^Choose/ })).toHaveCount(0);
   await expect(dialog.getByText("Upgrades open soon.", { exact: false })).toBeVisible();
   // One way to close: the ✕.
   await expect(dialog.getByRole("button", { name: /close/i })).toHaveCount(1);

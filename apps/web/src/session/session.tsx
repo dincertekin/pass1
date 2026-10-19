@@ -31,6 +31,8 @@ interface SessionActions {
   lock(): void;
   logOut(): Promise<void>;
   changeMasterPassword(currentPassword: string, newPassword: string): Promise<void>;
+  /** Fetches the account again, e.g. to see a new plan after paying. Keeps the vault unlocked. */
+  refreshAccount(): Promise<void>;
   deleteAccount(masterPassword: string): Promise<void>;
 }
 
@@ -119,6 +121,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         newWrappedVaultKey,
       });
       setSession({ status: "unlocked", account: updated, vaultKey });
+    },
+
+    async refreshAccount() {
+      const account = await api.me();
+      setSession((current) => (current.status === "unlocked" ? { ...current, account } : current));
     },
 
     async deleteAccount(masterPassword) {

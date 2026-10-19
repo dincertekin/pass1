@@ -1,11 +1,14 @@
 import {
   accountResponseSchema,
+  billingStatusResponseSchema,
   errorResponseSchema,
   listItemsResponseSchema,
   listSessionsResponseSchema,
   preloginResponseSchema,
+  redirectResponseSchema,
   vaultItemResponseSchema,
   type ChangePasswordRequest,
+  type CheckoutRequest,
   type CreateItemRequest,
   type ErrorCode,
   type RegisterRequest,
@@ -84,4 +87,8 @@ export const api = {
   revokeSession: (id: string) => request("DELETE", `/account/sessions/${encodeURIComponent(id)}`, null),
   revokeOtherSessions: () => request("POST", "/account/sessions/revoke-others", null),
   deleteAccount: (authKey: string) => request("DELETE", "/account", null, { authKey }),
+
+  billing: () => request("GET", "/billing", billingStatusResponseSchema),
+  checkout: (body: CheckoutRequest) => request("POST", "/billing/checkout", redirectResponseSchema, body),
+  billingPortal: () => request("POST", "/billing/portal", redirectResponseSchema),
 };

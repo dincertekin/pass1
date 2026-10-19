@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { buildApp } from "./app.js";
+import { buildApp, type AppDeps } from "./app.js";
 import { loadConfig } from "./config.js";
 import { sql } from "drizzle-orm";
 import { openDatabase, type Database, type Db } from "./db/client.js";
@@ -14,15 +14,15 @@ let shared: Database | null = null;
 
 export async function emptyTestDatabase(): Promise<Db> {
   shared ??= await openDatabase(TEST_DATABASE_URL);
-  await shared.db.execute(sql`truncate table users, sessions, vault_items cascade`);
+  await shared.db.execute(sql`truncate table users, sessions, vault_items, subscriptions, billing_checkouts, webhook_events cascade`);
   return shared.db;
 }
 
-/** A fresh app on an empty database. */
-export async function createTestApp(env: Record<string, string> = {}) {
+/** A fresh app on an empty database. `deps` swaps in fakes, e.g. a Paddle client. */
+export async function createTestApp(env: Record<string, string> = {}, deps: Partial<AppDeps> = {}) {
   const config = loadConfig({ NODE_ENV: "test", DATABASE_URL: TEST_DATABASE_URL, ...env });
   const db = await emptyTestDatabase();
-  return { app: await buildApp({ config, db }), db, config };
+  return { app: await buildApp({ config, db, ...deps }), db, config };
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>["app"];

@@ -4,6 +4,9 @@ import { sql } from "drizzle-orm";
 import Fastify, { type FastifyInstance } from "fastify";
 import { accountRoutes } from "./account/routes.js";
 import { authRoutes } from "./auth/routes.js";
+import { createPaddleClient, type PaddleClient } from "./billing/paddle.js";
+import { billingRoutes, WEBHOOK_PATH } from "./billing/routes.js";
+import { billingSettings } from "./billing/settings.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
 import { ApiError, errorBody, registerErrorHandler } from "./errors.js";
@@ -14,12 +17,17 @@ import { isAppPageRequest, sendAppPage, serveWebApp } from "./web-app.js";
 export interface AppDeps {
   config: Config;
   db: Db;
+  /** Tests pass a fake. Otherwise it's created from the config when billing is on. */
+  paddle?: PaddleClient;
 }
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export async function buildApp(deps: AppDeps) {
-  const { config } = deps;
+export async function buildApp(appDeps: AppDeps) {
+  const { config } = appDeps;
+  // One Paddle client for every route that needs it, when billing is on.
+  const settings = billingSettings(config);
+  const deps: AppDeps = { ...appDeps, paddle: appDeps.paddle ?? (settings ? createPaddleClient(settings) : undefined) };
 
   const app = Fastify({
     // The largest request is one encrypted item (64 KiB as base64) plus JSON around it.
@@ -47,6 +55,8 @@ export async function buildApp(deps: AppDeps) {
   // Second line of defense against cross-site requests, after SameSite=Strict cookies:
   // anything that changes data must come from the web app's own origin.
   app.addHook("onRequest", async (request) => {
+    // Paddle's webhook comes from Paddle's servers, not the web app; its signature proves it instead.
+    if (request.url === WEBHOOK_PATH) return;
     if (UNSAFE_METHODS.has(request.method) && request.headers.origin !== config.WEB_ORIGIN) {
       throw new ApiError(403, "FORBIDDEN", "Request origin not allowed.");
     }
@@ -73,6 +83,7 @@ export async function buildApp(deps: AppDeps) {
       authRoutes(api, deps);
       vaultRoutes(api, deps);
       accountRoutes(api, deps);
+      billingRoutes(api, deps);
     },
     { prefix: "/api" },
   );

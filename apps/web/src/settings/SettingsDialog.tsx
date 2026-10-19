@@ -1,18 +1,21 @@
-import { PLANS, type AccountResponse } from "@pass1/shared";
+import { PLANS, type AccountResponse, type BillingStatusResponse } from "@pass1/shared";
 import { clsx } from "clsx";
 import { ArrowDownToLine, ArrowLeft, Monitor, ShieldCheck, SlidersHorizontal, UserRound, X } from "lucide-react";
 import { Dialog as RadixDialog } from "radix-ui";
 import { useState, type ReactNode } from "react";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
 import { IconButton } from "../components/ui/IconButton";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { Switch } from "../components/ui/Switch";
+import { openBillingPortal, useBilling } from "../lib/billing";
 import { AUTO_LOCK_CHOICES, CLIPBOARD_CLEAR_CHOICES, updateSettings, useSettings } from "../lib/settings";
+import { errorMessage } from "../session/session";
 import { ChangePasswordForm } from "./ChangePassword";
 import { DeleteAccountForm } from "./DeleteAccount";
 import { DevicesTab } from "./Devices";
-import { Select, SettingRow } from "./layout";
+import { Outcome, Select, SettingRow } from "./layout";
 import { ExportForm, IMPORT_SOURCES, ImportForm, TransferTab, type ImportSource } from "./Transfer";
 
 export type SettingsTab = "general" | "security" | "account" | "devices" | "transfer";
@@ -221,19 +224,46 @@ function SecurityTab({ onChangePassword }: { onChangePassword: () => void }) {
 }
 
 function AccountTab({ account, onOpenPlans, onDelete }: { account: AccountResponse; onOpenPlans: () => void; onDelete: () => void }) {
-  const { email, plan } = account.user;
+  const { email, plan, id } = account.user;
+  const billing = useBilling(id);
+  const sub = billing?.subscription;
+  const [error, setError] = useState<string | null>(null);
+
+  async function manage() {
+    setError(null);
+    try {
+      await openBillingPortal(); // navigates to Paddle
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
   return (
     <div className="grid gap-7">
       <div>
         <SettingRow label="Email" hint={email} />
-        <SettingRow label="Plan" hint={PLANS[plan].name}>
-          {plan !== "unlimited" && <Button onClick={onOpenPlans}>{plan === "free" ? "Get pass1 Plus" : "See plans"}</Button>}
+        <SettingRow label="Plan" hint={<PlanSummary planName={PLANS[plan].name} subscription={sub ?? null} />}>
+          {sub && sub.status !== "canceled" ? (
+            <Button variant="secondary" onClick={() => void manage()}>
+              Manage subscription
+            </Button>
+          ) : (
+            plan !== "unlimited" && <Button onClick={onOpenPlans}>{plan === "free" ? "Get pass1 Plus" : "See plans"}</Button>
+          )}
         </SettingRow>
+        {sub?.status === "past_due" && (
+          <Alert tone="warning">
+            Your last payment didn't go through. Paddle will try again; update your card under Manage subscription to keep {PLANS[sub.plan].name}.
+          </Alert>
+        )}
+        {error && <Outcome tone="danger">{error}</Outcome>}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger-line px-4 py-3.5">
         <div className="grid gap-0.5">
           <span className="font-medium text-danger">Delete account</span>
-          <span className="text-xs text-muted">Deletes your vault from pass1 for good. Export it first if you want a copy.</span>
+          <span className="text-xs text-muted">
+            Deletes your vault from pass1 for good{sub && sub.status !== "canceled" ? " and cancels your subscription" : ""}. Export it first if you want a copy.
+          </span>
         </div>
         <Button variant="danger" onClick={onDelete}>
           Delete account…
@@ -241,4 +271,18 @@ function AccountTab({ account, onOpenPlans, onDelete }: { account: AccountRespon
       </div>
     </div>
   );
+}
+
+const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+
+/** "pass1 Plus · yearly · renews 1 Oct 2027", or when it ends. */
+function PlanSummary({ planName, subscription }: { planName: string; subscription: BillingStatusResponse["subscription"] }) {
+  if (!subscription || subscription.status === "canceled") return <>{planName}</>;
+  const period = subscription.interval === "year" ? "yearly" : "monthly";
+  const when = subscription.cancelsAt
+    ? `ends ${dateFormat.format(subscription.cancelsAt)}`
+    : subscription.currentPeriodEndsAt
+      ? `renews ${dateFormat.format(subscription.currentPeriodEndsAt)}`
+      : null;
+  return <>{[planName, period, when].filter(Boolean).join(" · ")}</>;
 }

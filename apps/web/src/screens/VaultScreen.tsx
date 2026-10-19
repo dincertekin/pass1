@@ -20,6 +20,7 @@ import { PaneResizer } from "../vault/PaneResizer";
 import { GeneratorPanel } from "../vault/PasswordGenerator";
 import { NewItemButton, PhoneHeader, PhoneTabBar } from "../vault/PhoneNav";
 import { Sidebar } from "../vault/Sidebar";
+import { UpgradeNotice } from "../vault/UpgradeNotice";
 import { useVault, VaultProvider } from "../vault/vault-store";
 
 export function VaultScreen({ account, vaultKey }: { account: AccountResponse; vaultKey: CryptoKey }) {
@@ -144,101 +145,107 @@ function Vault({ account, vaultKey }: { account: AccountResponse; vaultKey: Cryp
         counts={counts}
         section={section}
         onSectionChange={changeSection}
+        userId={account.user.id}
         email={account.user.email}
         plan={account.user.plan}
         onOpenSettings={() => setSettingsTab("general")}
         onOpenPlans={() => setPlansOpen(true)}
       />
 
-      {firstRun ? (
-        <div className="flex min-w-0 flex-1 flex-col">
-          <FirstRun
-            itemCount={entries.length}
-            onImport={() => setSettingsTab("transfer")}
-            onAdd={startNew}
-            onGenerate={() => setGeneratorOpen(true)}
-          />
-          <PhoneTabBar
-            active="vault"
-            onVault={() => changeSection("all")}
-            onGenerator={() => setGeneratorOpen(true)}
-            onHealth={() => changeSection("health")}
-            onSettings={() => setSettingsTab("general")}
-          />
-        </div>
-      ) : (
-        <>
-          <div
-            ref={listRef}
-            className={clsx("min-h-0 min-w-0 flex-1 flex-col md:flex md:w-(--list-width) md:flex-none", showDetailOnPhone ? "hidden" : "flex")}
-            style={{ "--list-width": `${listWidth}px` } as CSSProperties}
-          >
-            <PhoneHeader section={section} counts={counts} onSectionChange={changeSection} search={search} />
-            <ItemList
-              entries={visible}
-              total={counts.all}
-              health={health}
-              section={section}
-              query={query}
-              onQueryChange={setQuery}
-              selectedId={selectedId}
-              onSelect={select}
-              onOpen={() => headingRef.current?.focus()}
-              onNew={startNew}
-              searchRef={searchRef}
-            />
-            {section !== "trash" && <NewItemButton onClick={startNew} />}
-            <PhoneTabBar
-              active={section === "health" ? "health" : "vault"}
-              onVault={() => changeSection("all")}
-              onGenerator={() => setGeneratorOpen(true)}
-              onHealth={() => changeSection("health")}
-              onSettings={() => setSettingsTab("general")}
-            />
-          </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <UpgradeNotice userId={account.user.id} plan={account.user.plan} />
+        <div className="flex min-h-0 min-w-0 flex-1">
+          {firstRun ? (
+            <div className="flex min-w-0 flex-1 flex-col">
+              <FirstRun
+                itemCount={entries.length}
+                onImport={() => setSettingsTab("transfer")}
+                onAdd={startNew}
+                onGenerate={() => setGeneratorOpen(true)}
+              />
+              <PhoneTabBar
+                active="vault"
+                onVault={() => changeSection("all")}
+                onGenerator={() => setGeneratorOpen(true)}
+                onHealth={() => changeSection("health")}
+                onSettings={() => setSettingsTab("general")}
+              />
+            </div>
+          ) : (
+            <>
+              <div
+                ref={listRef}
+                className={clsx("min-h-0 min-w-0 flex-1 flex-col md:flex md:w-(--list-width) md:flex-none", showDetailOnPhone ? "hidden" : "flex")}
+                style={{ "--list-width": `${listWidth}px` } as CSSProperties}
+              >
+                <PhoneHeader section={section} counts={counts} onSectionChange={changeSection} search={search} />
+                <ItemList
+                  entries={visible}
+                  total={counts.all}
+                  health={health}
+                  section={section}
+                  query={query}
+                  onQueryChange={setQuery}
+                  selectedId={selectedId}
+                  onSelect={select}
+                  onOpen={() => headingRef.current?.focus()}
+                  onNew={startNew}
+                  searchRef={searchRef}
+                />
+                {section !== "trash" && <NewItemButton onClick={startNew} />}
+                <PhoneTabBar
+                  active={section === "health" ? "health" : "vault"}
+                  onVault={() => changeSection("all")}
+                  onGenerator={() => setGeneratorOpen(true)}
+                  onHealth={() => changeSection("health")}
+                  onSettings={() => setSettingsTab("general")}
+                />
+              </div>
 
-          <PaneResizer
-            width={listWidth}
-            listLeft={() => listRef.current?.getBoundingClientRect().left ?? 0}
-            onResize={setDraggedListWidth}
-            onResizeEnd={(width) => {
-              updateSettings({ listWidth: width });
-              setDraggedListWidth(null);
-            }}
-          />
-
-          {/* A column, so the item view or editor stretches to the full width of this pane. */}
-          <div className={clsx("min-h-0 min-w-0 flex-1 flex-col bg-bg md:flex", showDetailOnPhone ? "flex" : "hidden")}>
-            {editing ? (
-              <ItemEditor
-                key={editing === "new" ? "new" : selected?.id}
-                entry={editing === "existing" ? selected : null}
-                onSaved={(id) => {
-                  // Make sure a new item is visible: it may not match the current section or search.
-                  if (editing === "new") {
-                    setSection("all");
-                    setQuery("");
-                  }
-                  setSelectedId(id);
-                  setEditing(null);
+              <PaneResizer
+                width={listWidth}
+                listLeft={() => listRef.current?.getBoundingClientRect().left ?? 0}
+                onResize={setDraggedListWidth}
+                onResizeEnd={(width) => {
+                  updateSettings({ listWidth: width });
+                  setDraggedListWidth(null);
                 }}
-                onCancel={() => setEditing(null)}
               />
-            ) : selected ? (
-              <ItemDetail
-                key={selected.id}
-                entry={selected}
-                health={health.get(selected.id)}
-                onEdit={() => setEditing("existing")}
-                onBack={() => setSelectedId(null)}
-                headingRef={headingRef}
-              />
-            ) : (
-              <p className="m-auto hidden text-[13px] text-muted md:block">Select an item to see its details.</p>
-            )}
-          </div>
-        </>
-      )}
+
+              {/* A column, so the item view or editor stretches to the full width of this pane. */}
+              <div className={clsx("min-h-0 min-w-0 flex-1 flex-col bg-bg md:flex", showDetailOnPhone ? "flex" : "hidden")}>
+                {editing ? (
+                  <ItemEditor
+                    key={editing === "new" ? "new" : selected?.id}
+                    entry={editing === "existing" ? selected : null}
+                    onSaved={(id) => {
+                      // Make sure a new item is visible: it may not match the current section or search.
+                      if (editing === "new") {
+                        setSection("all");
+                        setQuery("");
+                      }
+                      setSelectedId(id);
+                      setEditing(null);
+                    }}
+                    onCancel={() => setEditing(null)}
+                  />
+                ) : selected ? (
+                  <ItemDetail
+                    key={selected.id}
+                    entry={selected}
+                    health={health.get(selected.id)}
+                    onEdit={() => setEditing("existing")}
+                    onBack={() => setSelectedId(null)}
+                    headingRef={headingRef}
+                  />
+                ) : (
+                  <p className="m-auto hidden text-[13px] text-muted md:block">Select an item to see its details.</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       <SettingsDialog
         open={settingsTab !== null}
@@ -253,7 +260,7 @@ function Vault({ account, vaultKey }: { account: AccountResponse; vaultKey: Cryp
           setPlansOpen(true);
         }}
       />
-      <PlansDialog open={plansOpen} onOpenChange={setPlansOpen} currentPlan={account.user.plan} />
+      <PlansDialog open={plansOpen} onOpenChange={setPlansOpen} currentPlan={account.user.plan} userId={account.user.id} />
       <Dialog open={generatorOpen} onOpenChange={setGeneratorOpen} title="Password generator" size="sm">
         <div className="overflow-y-auto px-5 pt-2 pb-5">
           <GeneratorPanel

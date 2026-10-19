@@ -11,14 +11,14 @@ import type { AppDeps } from "../app.js";
 import { hashAuthKey, verifyAuthKey } from "../auth/password.js";
 import { toAccountResponse } from "../auth/routes.js";
 import { authenticate, clearSessionCookie } from "../auth/sessions.js";
-import { sessions, users, type User } from "../db/schema.js";
+import { sessions, subscriptions, users, type User } from "../db/schema.js";
 import { ApiError, parseBody } from "../errors.js";
 import { rateLimits } from "../rate-limits.js";
 
 // Routes that change the account itself. Anything destructive asks for the master password
 // again (as an auth key), so a stolen or forgotten-open session isn't enough.
 
-export function accountRoutes(app: FastifyInstance, { db, config }: AppDeps) {
+export function accountRoutes(app: FastifyInstance, { db, config, paddle }: AppDeps) {
   // Each attempt checks a password, so these are limited like login.
   const passwordCheckLimit = rateLimits(config).passwordCheck;
 
@@ -94,11 +94,26 @@ export function accountRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     return reply.status(204).send();
   });
 
-  /** Deletes the user. Their sessions and vault items go with them (ON DELETE CASCADE). */
+  /**
+   * Deletes the user. Their sessions, vault items and subscription record go with them
+   * (ON DELETE CASCADE). A paid subscription is cancelled at Paddle first, so nobody keeps
+   * being charged for a deleted account; if that fails, the account stays.
+   */
   app.delete("/account", { config: { rateLimit: passwordCheckLimit } }, async (request, reply) => {
     const { user } = await authenticate(db, config, request);
     const { authKey } = parseBody(deleteAccountRequestSchema, request.body);
     await assertAuthKey(user, authKey, "Master password is incorrect.");
+
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id));
+    if (sub && sub.status !== "canceled") {
+      if (!paddle) throw new ApiError(502, "BILLING_FAILED", "Your subscription couldn't be cancelled. Your account wasn't deleted; try again later.");
+      try {
+        await paddle.cancelSubscriptionNow(sub.paddleSubscriptionId);
+      } catch (err) {
+        request.log.error(err, "cancelling subscription before account deletion failed");
+        throw new ApiError(502, "BILLING_FAILED", "Your subscription couldn't be cancelled. Your account wasn't deleted; try again later.");
+      }
+    }
 
     await db.delete(users).where(eq(users.id, user.id));
     clearSessionCookie(config, reply);

@@ -146,7 +146,7 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 ### Phase 7: Plans and billing
 
-- [ ] Three plans, defined in one config file:
+- [x] Three plans, defined in one config file (`packages/shared/src/plans.ts`); the paid features in the last row are built in later phases:
 
   | | Free | pass1 Plus | pass1 Unlimited |
   |---|---|---|---|
@@ -155,11 +155,12 @@ Each phase ends with something that works and has tests. Don't start a phase unt
   | Monthly | | $2.49 | $4.49 |
   | Features | Everything in the vault | + TOTP codes, breach report, file attachments | + emergency access, priority support |
 
-- [ ] Paddle (merchant of record, handles VAT and sales tax) checkout and customer portal, with webhooks updating the user's plan
-- [ ] `subscriptions` table: provider IDs, status and renewal date only; no card details ever touch pass1
-- [ ] "Get pass1 Plus" in the sidebar and a pricing page
-- [ ] Downgrade or failed payment never deletes data: over the limit, the vault becomes read-only (view, copy, export and delete still work)
-- **Done when:** upgrade, renewal, cancel and failed payment are all covered by tests using the provider's test mode
+- [x] Paddle (merchant of record, handles VAT and sales tax) checkout and customer portal, with webhooks updating the user's plan. Webhooks are signature-checked, applied once, and ignored when out of order; deleting an account cancels its subscription first
+- [x] Paddle's script runs only on a separate checkout origin (`apps/checkout/`, served by Caddy with its own CSP), never where vaults are decrypted
+- [x] `subscriptions` table: provider IDs, status and renewal date only; no card details ever touch pass1
+- [x] "Get pass1 Plus" in the sidebar and a plans dialog with yearly and monthly prices
+- [x] Downgrade or failed payment never deletes data: over the limit, the vault becomes read-only (view, copy, export and delete still work)
+- **Done when:** upgrade, renewal, cancel and failed payment are all covered by tests using the provider's test mode. Covered by API tests that feed the app Paddle-shaped, signed webhook events; ⏳ still to do: one real run through Paddle's sandbox (needs a Paddle account, see [docs/deploy.md](docs/deploy.md#billing-with-paddle))
 
 ### Phase 8: Public launch
 

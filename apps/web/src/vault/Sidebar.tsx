@@ -4,6 +4,7 @@ import { Activity, ChevronUp, List, Lock, LogOut, Settings, Star, Trash2 } from 
 import { DropdownMenu } from "radix-ui";
 import type { ReactNode } from "react";
 import { Logo } from "../components/Logo";
+import { useBilling } from "../lib/billing";
 import { useLockCountdown } from "../session/auto-lock";
 import { MOD_KEY } from "../lib/shortcuts";
 import { useSession } from "../session/session";
@@ -17,8 +18,9 @@ const SECTION_ICONS: Record<Section, ReactNode> = {
   trash: <Trash2 size={15} />,
 };
 
-export function Sidebar({ entries, counts, section, onSectionChange, email, plan, onOpenSettings, onOpenPlans }: {
+export function Sidebar({ entries, counts, section, onSectionChange, userId, email, plan, onOpenSettings, onOpenPlans }: {
   entries: VaultEntry[];
+  userId: string;
   counts: Record<Section, number>;
   section: Section;
   onSectionChange: (section: Section) => void;
@@ -56,7 +58,7 @@ export function Sidebar({ entries, counts, section, onSectionChange, email, plan
 
       {/* A flex column, not a grid: a long email must truncate, not widen the sidebar. */}
       <div className="mt-auto flex flex-col gap-2.5">
-        <PlanCard entries={entries} plan={plan} onOpenPlans={onOpenPlans} />
+        <PlanCard entries={entries} userId={userId} plan={plan} onOpenPlans={onOpenPlans} />
         <AccountMenu email={email} onOpenSettings={onOpenSettings} side="top" />
       </div>
     </nav>
@@ -64,14 +66,17 @@ export function Sidebar({ entries, counts, section, onSectionChange, email, plan
 }
 
 /** Usage against the plan's limit, and the way to upgrade. Trashed items count: they're still stored. */
-function PlanCard({ entries, plan, onOpenPlans }: { entries: VaultEntry[]; plan: PlanId; onOpenPlans: () => void }) {
+function PlanCard({ entries, userId, plan, onOpenPlans }: { entries: VaultEntry[]; userId: string; plan: PlanId; onOpenPlans: () => void }) {
   const { name, limits } = PLANS[plan];
+  const paymentFailed = useBilling(userId)?.subscription?.status === "past_due";
   const items = entries.length;
   const bytes = entries.reduce((sum, e) => sum + e.size, 0);
   // Show whichever limit is closer to being reached.
   const itemShare = limits.maxItems === null ? 0 : items / limits.maxItems;
   const byteShare = bytes / limits.maxStorageBytes;
   const share = Math.min(Math.max(itemShare, byteShare), 1);
+  // After a downgrade, nothing is deleted: the vault just can't grow until it's under the limit.
+  const overLimit = itemShare > 1 || byteShare > 1;
   const usage =
     byteShare > itemShare
       ? `${formatMB(bytes)} of ${formatMB(limits.maxStorageBytes)}`
@@ -91,6 +96,12 @@ function PlanCard({ entries, plan, onOpenPlans }: { entries: VaultEntry[]; plan:
           style={{ width: `${share * 100}%` }}
         />
       </div>
+      {overLimit && (
+        <p className="text-xs text-danger">
+          Over your plan's limit. You can still view, copy, export and delete items, but not add new ones.
+        </p>
+      )}
+      {paymentFailed && <p className="text-xs text-warning">Your last payment didn't go through. Update your card in Settings → Account.</p>}
       {plan !== "unlimited" && (
         <button type="button" onClick={onOpenPlans} className="cursor-pointer justify-self-start text-xs font-semibold text-accent hover:underline">
           {plan === "free" ? "Get pass1 Plus →" : "See plans →"}

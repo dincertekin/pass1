@@ -37,3 +37,26 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ PORT: "not-a-port", WEB_ORIGIN: "nope" })).toThrow(/PORT[\s\S]*WEB_ORIGIN/);
   });
 });
+
+describe("billing settings", () => {
+  const ALL = {
+    PADDLE_API_KEY: "key",
+    PADDLE_WEBHOOK_SECRET: "secret",
+    PADDLE_PRICE_PLUS_YEARLY: "pri_a",
+    PADDLE_PRICE_PLUS_MONTHLY: "pri_b",
+    PADDLE_PRICE_UNLIMITED_YEARLY: "pri_c",
+    PADDLE_PRICE_UNLIMITED_MONTHLY: "pri_d",
+  };
+
+  it("is all or nothing", () => {
+    expect(() => loadConfig(ALL)).not.toThrow();
+    expect(() => loadConfig({})).not.toThrow();
+    expect(() => loadConfig({ PADDLE_API_KEY: "key" })).toThrow(/Set all of PADDLE_API_KEY/);
+  });
+
+  it("must use Paddle's production environment in production", () => {
+    const prod = { NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32), DATABASE_URL: "postgres://db/pass1", ...ALL };
+    expect(() => loadConfig(prod)).toThrow(/PADDLE_ENVIRONMENT must be production/);
+    expect(() => loadConfig({ ...prod, PADDLE_ENVIRONMENT: "production" })).not.toThrow();
+  });
+});

@@ -84,6 +84,21 @@ docker compose ps                       # wait for "(healthy)"
 
 Database migrations run when the new app starts. If something is wrong, check out the previous version, rebuild, and restore the backup you just took.
 
+## Billing with Paddle
+
+Without the Paddle settings, pass1 runs with the Free plan only, and the plans dialog says upgrades open soon. To take payments:
+
+1. **Start in the sandbox.** Make an account at [sandbox-vendors.paddle.com](https://sandbox-vendors.paddle.com) and keep `PADDLE_ENVIRONMENT=sandbox` until everything below works with Paddle's test cards.
+2. **Products and prices.** Under *Catalog → Products*, create *pass1 Plus* with a yearly price ($19) and a monthly one ($2.49), and *pass1 Unlimited* with $39 yearly and $4.49 monthly. Put the four `pri_…` IDs in `.env`.
+3. **The checkout domain.** Pick a subdomain such as `pay.pass1.example.com`, point its DNS at the server and set `CHECKOUT_DOMAIN`. Caddy serves `apps/checkout/` there. Paddle's script runs only on that page, never on the app's origin where vaults are decrypted.
+4. **Default payment link.** Under *Checkout → Checkout settings*, set the default payment link to `https://<CHECKOUT_DOMAIN>/`, and approve that domain if Paddle asks.
+5. **API key and client token.** Under *Developer tools → Authentication*, create an API key (permissions: transactions write, customers read and write, customer portal sessions write, subscriptions write) and a client-side token. Put them in `PADDLE_API_KEY` and `PADDLE_CLIENT_TOKEN`.
+6. **Webhook.** Under *Developer tools → Notifications*, add a destination with URL `https://<DOMAIN>/api/billing/webhook` and the events `subscription.created`, `subscription.updated`, `subscription.activated`, `subscription.canceled`, `subscription.past_due`, `subscription.paused` and `subscription.resumed`. Put its secret key in `PADDLE_WEBHOOK_SECRET`.
+7. `docker compose up -d` and try it: upgrade with a test card, check that the sidebar shows the new plan, open *Manage subscription*, cancel, and check that the account goes back to Free when the period ends. Paddle's notification log shows each delivery and its response.
+8. **Going live.** Repeat steps 2 to 6 in the live Paddle dashboard (sandbox IDs and keys don't work there), set `PADDLE_ENVIRONMENT=production`, and restart. pass1 refuses to start in production with sandbox settings.
+
+How it works: the server creates a Paddle transaction for the chosen price and sends the browser to its checkout on the checkout domain. Paddle then reports the subscription to the webhook, which is the only thing that changes a user's plan. Webhook requests are checked against their signature, applied once even when delivered twice, and ignored when they arrive out of order. Deleting an account cancels its subscription first.
+
 ## Monitoring
 
 - **Uptime:** point an uptime checker (UptimeRobot, Better Stack, a cron job with `curl`) at `https://<your domain>/api/health`. It returns 200 only when the app and the database both work, and 503 when the database is down.

@@ -1,9 +1,29 @@
-# Caddy gets and renews the HTTPS certificate for DOMAIN by itself (Let's Encrypt).
+# Caddy gets and renews the HTTPS certificates by itself (Let's Encrypt).
 # For DOMAIN=localhost it uses a local certificate instead, for trying the stack out.
+
+# The app and its API.
 {$DOMAIN} {
 	encode zstd gzip
 	reverse_proxy app:3000
 
 	# pass1 sets its own security headers; just don't advertise the server software.
 	header -Server
+}
+
+# The checkout page, on its own origin so Paddle's script never runs where vaults are open.
+# Only used when billing is on (see docs/deploy.md); without CHECKOUT_DOMAIN it answers on checkout.localhost only.
+{$CHECKOUT_DOMAIN:checkout.localhost} {
+	root * /srv/checkout
+	templates
+	file_server
+
+	header {
+		-Server
+		# Paddle's checkout and nothing else. No 'unsafe-eval'; Paddle's styles need inline style.
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.paddle.com; frame-src https://*.paddle.com; connect-src 'self' https://*.paddle.com; img-src 'self' data: https://*.paddle.com; style-src 'self' 'unsafe-inline' https://*.paddle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Referrer-Policy "no-referrer"
+		X-Content-Type-Options "nosniff"
+		Cache-Control "no-store"
+	}
 }

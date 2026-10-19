@@ -19,8 +19,14 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+      # The checkout page's domain and settings, only needed with billing on (docs/deploy.md).
+      CHECKOUT_DOMAIN: ${CHECKOUT_DOMAIN:-}
+      PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL in .env}
+      PADDLE_ENVIRONMENT: ${PADDLE_ENVIRONMENT:-sandbox}
+      PADDLE_CLIENT_TOKEN: ${PADDLE_CLIENT_TOKEN:-}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./apps/checkout:/srv/checkout:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
@@ -37,6 +43,14 @@ services:
       PRELOGIN_SECRET: ${PRELOGIN_SECRET:?Set PRELOGIN_SECRET in .env}
       # Caddy is the one proxy in front of the app.
       TRUST_PROXY: "1"
+      # Billing: all empty runs pass1 without upgrades. See docs/deploy.md, "Billing with Paddle".
+      PADDLE_ENVIRONMENT: ${PADDLE_ENVIRONMENT:-sandbox}
+      PADDLE_API_KEY: ${PADDLE_API_KEY:-}
+      PADDLE_WEBHOOK_SECRET: ${PADDLE_WEBHOOK_SECRET:-}
+      PADDLE_PRICE_PLUS_YEARLY: ${PADDLE_PRICE_PLUS_YEARLY:-}
+      PADDLE_PRICE_PLUS_MONTHLY: ${PADDLE_PRICE_PLUS_MONTHLY:-}
+      PADDLE_PRICE_UNLIMITED_YEARLY: ${PADDLE_PRICE_UNLIMITED_YEARLY:-}
+      PADDLE_PRICE_UNLIMITED_MONTHLY: ${PADDLE_PRICE_UNLIMITED_MONTHLY:-}
     depends_on:
       db:
         condition: service_healthy
