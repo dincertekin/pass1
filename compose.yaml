@@ -7,7 +7,7 @@ services:
   # Terminates HTTPS and forwards to the app. The only service with open ports.
   caddy:
     # Exact versions, so every rebuild runs the same software. Dependabot proposes updates.
-    image: caddy:2.11.6
+    image: caddy:2.11.7
     restart: unless-stopped
     # Caddy needs nothing but binding ports 80 and 443.
     cap_drop:
