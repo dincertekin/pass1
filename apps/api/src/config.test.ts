@@ -8,17 +8,27 @@ describe("loadConfig", () => {
     expect(config.HOST).toBe("127.0.0.1");
   });
 
+  const PROD = { NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32), DATABASE_URL: "postgres://pass1@db/pass1" };
+
   it("refuses to start in production without a prelogin secret", () => {
-    expect(() => loadConfig({ NODE_ENV: "production" })).toThrow(/PRELOGIN_SECRET must be set in production/);
+    expect(() => loadConfig({ ...PROD, PRELOGIN_SECRET: undefined })).toThrow(/PRELOGIN_SECRET must be set in production/);
   });
 
-  it("accepts a real secret in production", () => {
-    const config = loadConfig({ NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32) });
-    expect(config.NODE_ENV).toBe("production");
+  it("accepts a real secret and Postgres in production", () => {
+    expect(loadConfig(PROD).NODE_ENV).toBe("production");
+  });
+
+  it("refuses PGlite in production", () => {
+    expect(() => loadConfig({ ...PROD, DATABASE_URL: "pglite:./data/pglite" })).toThrow(/must be a postgres:\/\/ URL in production/);
+  });
+
+  it("trusts no proxy unless told how many there are", () => {
+    expect(loadConfig({}).TRUST_PROXY).toBe(0);
+    expect(loadConfig({ TRUST_PROXY: "1" }).TRUST_PROXY).toBe(1);
   });
 
   it("refuses relaxed rate limits in production", () => {
-    expect(() => loadConfig({ NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32), RATE_LIMITS: "relaxed" })).toThrow(
+    expect(() => loadConfig({ ...PROD, RATE_LIMITS: "relaxed" })).toThrow(
       /RATE_LIMITS=relaxed is only for tests/,
     );
   });

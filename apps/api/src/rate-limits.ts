@@ -1,3 +1,4 @@
+import type { ThrottleRule } from "./auth/login-throttle.js";
 import type { Config } from "./config.js";
 
 // Every rate limit in one place. Limits are per IP address and kept in memory, which is
@@ -28,4 +29,10 @@ export function rateLimits(config: Config): RateLimits {
     relaxed[key] = { ...STRICT[key], max: STRICT[key].max * 100 };
   }
   return relaxed;
+}
+
+/** Failed logins allowed per account, from any number of IPs (see auth/login-throttle.ts). */
+export function loginFailureRule(config: Config): ThrottleRule {
+  const rule = { maxFailures: 10, windowMs: 15 * ONE_MINUTE };
+  return config.RATE_LIMITS === "strict" ? rule : { ...rule, maxFailures: rule.maxFailures * 100 };
 }

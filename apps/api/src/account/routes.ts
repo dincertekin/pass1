@@ -75,7 +75,8 @@ export function accountRoutes(app: FastifyInstance, { db, config }: AppDeps) {
   /** Logs out one device. Ending the current session also clears this browser's cookie. */
   app.delete("/account/sessions/:id", async (request, reply) => {
     const { user, sessionId } = await authenticate(db, config, request);
-    const { id } = parseBody(z.object({ id: z.string() }), request.params);
+    // Session IDs are always the SHA-256 of a token, written as 64 hex characters.
+    const { id } = parseBody(z.object({ id: z.string().regex(/^[0-9a-f]{64}$/) }), request.params);
 
     const deleted = await db
       .delete(sessions)

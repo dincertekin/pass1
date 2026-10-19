@@ -1,0 +1,29 @@
+# Opens pull requests when dependencies have updates, so pinned versions don't go stale.
+# Each update is a PR: CI runs on it, and nothing is merged without a review.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait before proposing brand-new releases (supply-chain caution, as for every npm package here).
+    cooldown:
+      default-days: 14
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

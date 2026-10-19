@@ -12,7 +12,6 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@electric-sql/pglite": "0.5.8",
     "@fastify/cookie": "11.1.2",
     "@fastify/helmet": "13.1.1",
     "@fastify/rate-limit": "11.2.0",
@@ -25,6 +24,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@pass1/crypto": "*",
     "@types/node": "^26.6.5",
     "@types/pg": "8.23.1",

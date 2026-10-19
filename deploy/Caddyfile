@@ -1,0 +1,9 @@
+# Caddy gets and renews the HTTPS certificate for DOMAIN by itself (Let's Encrypt).
+# For DOMAIN=localhost it uses a local certificate instead, for trying the stack out.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+
+	# pass1 sets its own security headers; just don't advertise the server software.
+	header -Server
+}

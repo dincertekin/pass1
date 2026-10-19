@@ -1,6 +1,8 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sessions, users } from "../db/schema.js";
 import { b64, createTestApp, ORIGIN, registerBody, SESSION_COOKIE as COOKIE } from "../test-helpers.js";
+import { deleteExpiredSessions } from "./sessions.js";
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 
@@ -191,5 +193,18 @@ describe("request safety", () => {
     const res = await ctx.app.inject({ method: "GET", url: "/api/health" });
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
     expect(res.headers["strict-transport-security"]).toBeDefined();
+  });
+});
+
+describe("deleteExpiredSessions", () => {
+  it("removes expired sessions of every user and keeps live ones", async () => {
+    await registered("ada@example.com");
+    await registered("eve@example.com");
+    // Expire Ada's session only.
+    const ada = (await ctx.db.select().from(users)).find((u) => u.email === "ada@example.com")!;
+    await ctx.db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(sessions.userId, ada.id));
+
+    expect(await deleteExpiredSessions(ctx.db)).toBe(1);
+    expect(await ctx.db.select().from(sessions)).toHaveLength(1);
   });
 });

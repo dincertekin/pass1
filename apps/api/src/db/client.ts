@@ -1,9 +1,6 @@
-import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { migrate as migratePg } from "drizzle-orm/node-postgres/migrator";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
-import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import pg from "pg";
@@ -39,8 +36,13 @@ export async function openDatabase(url: string): Promise<Database> {
   }
 
   if (url.startsWith("pglite:")) {
+    // Loaded only here: PGlite is a development dependency and isn't in the production image.
+    const { PGlite } = await import("@electric-sql/pglite");
+    const { drizzle: drizzlePglite } = await import("drizzle-orm/pglite");
+    const { migrate: migratePglite } = await import("drizzle-orm/pglite/migrator");
+
     const location = url.slice("pglite:".length);
-    let client: PGlite;
+    let client: InstanceType<typeof PGlite>;
     if (location === "memory") {
       client = new PGlite();
     } else {

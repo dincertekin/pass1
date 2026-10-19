@@ -1,0 +1,89 @@
+# pass1 in production: one server running Caddy (HTTPS), the app, Postgres and daily backups.
+# Setup, backups, restore and upgrades: docs/deploy.md. Settings come from .env (deploy/.env.example).
+
+name: pass1
+
+services:
+  # Terminates HTTPS and forwards to the app. The only service with open ports.
+  caddy:
+    # Exact versions, so every rebuild runs the same software. Dependabot proposes updates.
+    image: caddy:2.11.6
+    restart: unless-stopped
+    # Caddy needs nothing but binding ports 80 and 443.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+  app:
+    build: .
+    image: pass1:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://pass1:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/pass1
+      WEB_ORIGIN: ${PUBLIC_URL:?Set PUBLIC_URL in .env}
+      PRELOGIN_SECRET: ${PRELOGIN_SECRET:?Set PRELOGIN_SECRET in .env}
+      # Caddy is the one proxy in front of the app.
+      TRUST_PROXY: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    # The app writes nothing to disk, so its filesystem is read-only.
+    read_only: true
+    tmpfs:
+      - /tmp
+    # A Node server on port 3000 needs no Linux capabilities at all.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  db:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pass1
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: pass1
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=pass1 --dbname=pass1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Dumps the database once a day into ./backups (see deploy/backup.sh).
+  backup:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: pass1
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      PGDATABASE: pass1
+      BACKUP_KEEP_DAYS: "14"
+    volumes:
+      - ./deploy/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+    entrypoint: ["sh", "/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

@@ -5,7 +5,9 @@ import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-const external = Object.keys(pkg.dependencies).filter((name) => !name.startsWith("@pass1/"));
+// Dev dependencies too: PGlite is loaded only in development (db/client.ts) and must stay out
+// of the bundle, so production never contains it.
+const external = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((name) => !name.startsWith("@pass1/"));
 
 await build({
   entryPoints: ["src/server.ts"],

@@ -11,7 +11,8 @@ import { createHmac } from "node:crypto";
 import type { AppDeps } from "../app.js";
 import { users, type User } from "../db/schema.js";
 import { ApiError, parseBody } from "../errors.js";
-import { rateLimits } from "../rate-limits.js";
+import { loginFailureRule, rateLimits } from "../rate-limits.js";
+import { LoginThrottle } from "./login-throttle.js";
 import { hashAuthKey, verifyAgainstDummy, verifyAuthKey } from "./password.js";
 import { endSession, requireUser, startSession } from "./sessions.js";
 
@@ -21,6 +22,7 @@ const DEFAULT_KDF_PARAMS = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1
 
 export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
   const limits = rateLimits(config);
+  const throttle = new LoginThrottle(loginFailureRule(config));
 
   /**
    * Step 1 of login: the browser needs the user's salt and KDF settings before it can derive
@@ -72,16 +74,27 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
 
   app.post("/auth/login", { config: { rateLimit: limits.login } }, async (request, reply): Promise<AccountResponse> => {
     const { email, authKey } = parseBody(loginRequestSchema, request.body);
-    const user = await findUserByEmail(email);
 
+    // Checked before anything else, and for unknown emails too (see auth/login-throttle.ts).
+    const wait = throttle.retryAfter(email);
+    if (wait > 0) {
+      const minutes = Math.ceil(wait / 60_000);
+      reply.header("retry-after", Math.ceil(wait / 1000));
+      throw new ApiError(429, "RATE_LIMITED", `Too many failed attempts for this account. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+    }
+
+    const user = await findUserByEmail(email);
     if (!user) {
       await verifyAgainstDummy(authKey);
+      throttle.recordFailure(email);
       throw invalidCredentials();
     }
     if (!(await verifyAuthKey(user.authHash, authKey))) {
+      throttle.recordFailure(email);
       throw invalidCredentials();
     }
 
+    throttle.recordSuccess(email);
     await startSession(db, config, request, reply, user.id);
     return toAccountResponse(user);
   });

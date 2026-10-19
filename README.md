@@ -28,6 +28,8 @@ master password ──Argon2id(salt)──► master key (never leaves the brows
 - **Versioned.** Every stored blob carries a format version, and a pinned test vector makes sure existing vaults keep decrypting.
 - **Standard primitives only:** Argon2id (via `hash-wasm`), HKDF-SHA256 and AES-256-GCM (via the Web Crypto API).
 
+The latest security review, with every finding and accepted risk: [docs/security-review.md](docs/security-review.md).
+
 ## Threat model
 
 | Protects against | Does not protect against |
@@ -35,6 +37,9 @@ master password ──Argon2id(salt)──► master key (never leaves the brows
 | Database leak or server breach | Malware or a keylogger on the user's device |
 | A malicious server operator reading vaults | A compromised server serving malicious JavaScript (a limit of every web-based password manager) |
 | Traffic interception | Weak master passwords (Argon2id slows guessing but can't prevent it) |
+| Guessing a master password through the login form, from one machine or many | A malicious server rolling an item back to an older version, or hiding an item |
+
+**What the server can see:** your email; how many items you have and their sizes (padded to 256 bytes); when each was created, changed or moved to the trash; and, for each logged-in device, the browser name and when it was last used. It never sees item names, websites, usernames, passwords or notes, and it doesn't log IP addresses.
 
 **There is no account recovery.** If the master password is lost, the vault cannot be decrypted. That is the point of zero knowledge.
 
@@ -59,6 +64,8 @@ npm run dev:api     # API on http://localhost:3000 (database in apps/api/data/pg
 npm run dev:web     # web app on http://localhost:5173
 npm run test:e2e    # builds, then runs the browser tests (uses your installed Google Chrome)
 ```
+
+Deploying to a server: [docs/deploy.md](docs/deploy.md).
 
 ## Roadmap
 
@@ -129,11 +136,13 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 - [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce), verified with zero violations in Chrome
 - [x] API under `/api`, serving the built web app from the same origin
 - [x] Postgres everywhere: real Postgres in production, PGlite (Postgres in WebAssembly) in development and tests; CI also runs the API tests on Postgres 18
-- [x] End-to-end tests with Playwright (17 tests, every one also fails on any CSP violation), including the heap snapshot check that a locked vault holds no keys or plaintext
-- [ ] Docker image, deployment, backups
-- [ ] Monitoring, error tracking and logs that never contain secrets
-- [ ] Backups with a tested restore
-- **Done when:** a fresh server can be deployed and restored from backup by following the docs
+- [x] End-to-end tests with Playwright (27 tests, every one also fails on any CSP violation), including the heap snapshot check that a locked vault holds no keys or plaintext
+- [x] Docker image (non-root, read-only filesystem, health check) and Compose stack: Caddy (HTTPS), app, Postgres, backups
+- [x] Daily backups, kept 14 days, never of an empty database; restore script; guide in [docs/deploy.md](docs/deploy.md)
+- [x] Health check that includes the database, JSON request logs without bodies, real client IPs behind the proxy
+- [ ] Error tracking (Sentry or similar, with nothing sensitive in reports)
+- [x] Security review of the whole app ([docs/security-review.md](docs/security-review.md)); findings fixed and tested
+- **Done when:** a fresh server can be deployed and restored from backup by following the docs. ✅ Done locally: data created over HTTPS, backed up, every volume deleted, restored onto a fresh stack, logged in, items decrypted
 
 ### Phase 7: Plans and billing
 

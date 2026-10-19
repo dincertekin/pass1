@@ -77,6 +77,15 @@ export async function authenticate(
   return { user: row.user, sessionId };
 }
 
+/**
+ * Deletes every expired session. Logging in tidies up that user's own, but sessions of people
+ * who never come back would otherwise stay forever. server.ts runs this once an hour.
+ */
+export async function deleteExpiredSessions(db: Db, now = new Date()): Promise<number> {
+  const deleted = await db.delete(sessions).where(lte(sessions.expiresAt, now)).returning({ id: sessions.id });
+  return deleted.length;
+}
+
 /** Shorthand for routes that only need the user. */
 export async function requireUser(db: Db, config: Config, request: FastifyRequest): Promise<User> {
   return (await authenticate(db, config, request)).user;
