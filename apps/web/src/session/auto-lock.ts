@@ -29,6 +29,8 @@ export function useAutoLock(lock: () => void) {
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") check();
+      // Settings → Security → "Lock when this tab is hidden".
+      else if (getSettings().lockWhenHidden) lock();
     };
 
     ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, markActive, { passive: true }));

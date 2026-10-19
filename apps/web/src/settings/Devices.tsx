@@ -1,16 +1,17 @@
 import type { SessionInfo } from "@pass1/shared";
+import { Monitor, Smartphone } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { api } from "../lib/api";
 import { errorMessage } from "../session/session";
-import { Outcome, Row, Section } from "./layout";
-import { describeUserAgent } from "./user-agent";
+import { Outcome, SettingRow } from "./layout";
+import { describeUserAgent, isPhone } from "./user-agent";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 /** Everywhere this account is logged in, with a way to log each one out. */
-export function Devices() {
+export function DevicesTab() {
   const [sessions, setSessions] = useState<SessionInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,38 +37,48 @@ export function Devices() {
     }
   }
 
+  if (sessions === null && !error) return <p className="py-4 text-[13px] text-muted">Loading…</p>;
   const others = sessions?.filter((s) => !s.current) ?? [];
 
   return (
-    <Section title="Devices" note="Where you're logged in">
-      {sessions === null && !error && <Row label="Loading…" />}
-      {sessions?.map((s) => (
-        <Row
-          key={s.id}
-          label={describeUserAgent(s.userAgent)}
-          hint={`Last active ${dateFormat.format(s.lastUsedAt)} · Logged in ${dateFormat.format(s.createdAt)}`}
-        >
-          {s.current ? (
-            <Badge tone="accent">This device</Badge>
-          ) : (
-            <Button variant="secondary" size="sm" onClick={() => run(() => api.revokeSession(s.id))}>
-              Log out
-            </Button>
-          )}
-        </Row>
-      ))}
+    <div>
+      {sessions?.map((s) => {
+        const Icon = isPhone(s.userAgent) ? Smartphone : Monitor;
+        return (
+          <SettingRow
+            key={s.id}
+            label={
+              <span className="flex items-center gap-3">
+                <span aria-hidden="true" className="grid size-8.5 place-items-center rounded-lg bg-sunken text-muted">
+                  <Icon size={17} />
+                </span>
+                {describeUserAgent(s.userAgent)}
+              </span>
+            }
+            hint={<span className="pl-11.5">Last active {dateFormat.format(s.lastUsedAt)}</span>}
+          >
+            {s.current ? (
+              <Badge tone="accent">This device</Badge>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => run(() => api.revokeSession(s.id))}>
+                Log out
+              </Button>
+            )}
+          </SettingRow>
+        );
+      })}
       {others.length > 0 && (
-        <Row label="Log out everywhere else" hint="Every device except this one will need to log in again.">
-          <Button variant="danger" size="sm" onClick={() => run(() => api.revokeOtherSessions())}>
-            Log out {others.length} other{others.length === 1 ? "" : "s"}
+        <div className="pt-4">
+          <Button variant="danger" onClick={() => run(() => api.revokeOtherSessions())}>
+            Log out all other devices
           </Button>
-        </Row>
+        </div>
       )}
       {error && (
-        <div className="px-4 py-3">
+        <div className="pt-3">
           <Outcome tone="danger">{error}</Outcome>
         </div>
       )}
-    </Section>
+    </div>
   );
 }

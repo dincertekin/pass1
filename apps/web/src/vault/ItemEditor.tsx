@@ -55,58 +55,60 @@ export function ItemEditor({ entry, onSaved, onCancel }: {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid min-w-0 content-start gap-4 overflow-y-auto p-5">
-      <Button variant="ghost" size="sm" onClick={onCancel} className="justify-self-start md:hidden">
-        <ArrowLeft size={14} /> Back
-      </Button>
-      <h2 className="text-lg font-semibold">{entry ? "Edit item" : "New item"}</h2>
-
-      {error && (
-        <Alert>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span>{error.message}</span>
-            {/* Reloading throws away this edit, so it stays the user's choice. */}
-            {error.conflict && (
-              <Button variant="secondary" size="sm" onClick={() => void vault.reload().then(onCancel)}>
-                Reload
-              </Button>
-            )}
-          </div>
-        </Alert>
-      )}
-
-      <TextField label="Name" required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="GitHub" />
-      <TextField
-        label="Username"
-        autoComplete="off"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
-      <PasswordField
-        label="Password"
-        autoComplete="new-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        actions={<PasswordGenerator onUse={setPassword} />}
-      />
-      <TextField
-        label="Website"
-        type="text"
-        inputMode="url"
-        autoComplete="off"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder="github.com"
-      />
-      <TextAreaField label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-
-      <div className="flex justify-end gap-2 border-t border-border pt-4">
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
+    <form onSubmit={handleSubmit} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-5 md:px-9 md:py-7">
+      <div className="mx-auto grid w-full max-w-220 content-start gap-4">
+        <Button variant="ghost" size="sm" onClick={onCancel} className="self-start md:hidden">
+          <ArrowLeft size={14} /> Back
         </Button>
-        <Button type="submit" disabled={busy || !name.trim()}>
-          {busy ? "Saving…" : "Save"}
-        </Button>
+        <h2 className="text-lg font-semibold">{entry ? "Edit item" : "New item"}</h2>
+
+        {error && (
+          <Alert>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>{error.message}</span>
+              {/* Reloading throws away this edit, so it stays the user's choice. */}
+              {error.conflict && (
+                <Button variant="secondary" size="sm" onClick={() => void vault.reload().then(onCancel)}>
+                  Reload
+                </Button>
+              )}
+            </div>
+          </Alert>
+        )}
+
+        <TextField label="Name" required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="GitHub" />
+        <TextField
+          label="Username"
+          autoComplete="off"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <PasswordField
+          label="Password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          actions={<PasswordGenerator onUse={setPassword} />}
+        />
+        <TextField
+          label="Website"
+          type="text"
+          inputMode="url"
+          autoComplete="off"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="github.com"
+        />
+        <TextAreaField label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+        <div className="flex justify-end gap-2 border-t border-border pt-4">
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={busy || !name.trim()}>
+            {busy ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
     </form>
   );

@@ -23,3 +23,8 @@ export function describeUserAgent(ua: string | null): string {
 
   return os ? `${browser} on ${os}` : browser;
 }
+
+/** Phones and tablets get a phone icon in the Devices list. */
+export function isPhone(ua: string | null): boolean {
+  return !!ua && /iPhone|iPad|iPod|Android|Mobile/.test(ua);
+}

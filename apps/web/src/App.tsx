@@ -3,7 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ClipboardToast } from "./components/ClipboardToast";
 import { LoginScreen } from "./screens/LoginScreen";
 import { RegisterScreen } from "./screens/RegisterScreen";
-import { SettingsScreen } from "./screens/SettingsScreen";
 import { UnlockScreen } from "./screens/UnlockScreen";
 import { VaultScreen } from "./screens/VaultScreen";
 import { useAutoLock } from "./session/auto-lock";
@@ -55,7 +54,6 @@ function UnlockedRoutes({ account, vaultKey }: { account: AccountResponse; vault
   return (
     <Routes>
       <Route path="/vault" element={<VaultScreen account={account} vaultKey={vaultKey} />} />
-      <Route path="/settings" element={<SettingsScreen account={account} vaultKey={vaultKey} />} />
       <Route path="*" element={<Navigate to="/vault" replace />} />
     </Routes>
   );

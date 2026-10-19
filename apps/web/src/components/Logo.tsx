@@ -3,7 +3,7 @@ export function Logo() {
     <div className="flex items-center gap-1.5 text-[15px] font-bold tracking-tight">
       <span
         aria-hidden="true"
-        className="grid size-[18px] place-items-center rounded-sm bg-accent font-mono text-[11px] text-on-accent"
+        className="grid size-4.5 place-items-center rounded-sm bg-accent font-mono text-[11px] text-on-accent"
       >
         1
       </span>

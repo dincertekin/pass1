@@ -39,7 +39,8 @@ export function PasswordGenerator({ onUse }: { onUse: (value: string) => void })
   );
 }
 
-function GeneratorPanel({ onUse }: { onUse: (value: string) => void }) {
+/** The generator itself. `action: "copy"` is for the standalone generator (phone tab bar). */
+export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: string) => void; action?: "use" | "copy" }) {
   const settings = useSettings();
   const { generatorKind: kind, passwordOptions, passphraseOptions } = settings;
   const [generator, setGenerator] = useState<Generator | null>(null);
@@ -160,7 +161,7 @@ function GeneratorPanel({ onUse }: { onUse: (value: string) => void }) {
       )}
 
       <Button size="lg" disabled={!value} onClick={() => onUse(value)}>
-        Use this {kind}
+        {action === "copy" ? `Copy ${kind}` : `Use this ${kind}`}
       </Button>
     </div>
   );

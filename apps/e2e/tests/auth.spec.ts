@@ -1,4 +1,6 @@
-import { expect, logIn, registerNewAccount, test, unlock } from "./fixtures";
+import { expect, logIn, logOut, registerNewAccount, test, unlock } from "./fixtures";
+
+const WELCOME = "Welcome to pass1. Let's fill your vault.";
 
 test("a new account starts unlocked, and a reload locks it", async ({ page }) => {
   await registerNewAccount(page);
@@ -9,20 +11,19 @@ test("a new account starts unlocked, and a reload locks it", async ({ page }) =>
   await expect(page.getByText("Master password is incorrect.")).toBeVisible();
 
   await unlock(page);
-  await expect(page.getByText("Your vault is empty")).toBeVisible();
+  await expect(page.getByRole("heading", { name: WELCOME })).toBeVisible();
 });
 
 test("log out, then log back in", async ({ page }) => {
   const email = await registerNewAccount(page);
-  await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await logOut(page);
 
   // The email is case-insensitive.
   await logIn(page, email.toUpperCase(), "wrong password");
   await expect(page.getByText("Email or master password is incorrect.")).toBeVisible();
 
   await logIn(page, email);
-  await expect(page.getByText("Your vault is empty")).toBeVisible();
+  await expect(page.getByRole("heading", { name: WELCOME })).toBeVisible();
 });
 
 test("a weak master password can't be used", async ({ page }) => {

@@ -39,7 +39,7 @@ export async function registerNewAccount(page: Page, password = MASTER_PASSWORD)
   await page.getByLabel("Confirm master password").fill(password);
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByText("Your vault is empty")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome to pass1. Let's fill your vault." })).toBeVisible();
   return email;
 }
 
@@ -56,7 +56,9 @@ export async function unlock(page: Page, password = MASTER_PASSWORD) {
 }
 
 export async function addItem(page: Page, item: { name: string; password: string; username?: string; url?: string; notes?: string }) {
-  await page.getByRole("button", { name: "New item" }).click();
+  // An empty vault shows the first-run screen, where the button is "Add a login".
+  const firstRun = page.getByRole("button", { name: /Add a login/ });
+  await (await firstRun.isVisible() ? firstRun : page.getByRole("button", { name: "New item" })).click();
   await page.getByLabel("Name", { exact: true }).fill(item.name);
   if (item.username) await page.getByLabel("Username").fill(item.username);
   await page.getByLabel("Password", { exact: true }).fill(item.password);
@@ -66,7 +68,28 @@ export async function addItem(page: Page, item: { name: string; password: string
   await expect(page.getByRole("heading", { name: item.name })).toBeVisible();
 }
 
-export async function openSettings(page: Page) {
-  await page.getByRole("link", { name: "Settings" }).first().click();
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+/** Opens the account menu at the bottom of the sidebar (the button with the lock timer). */
+export async function openAccountMenu(page: Page) {
+  await page.getByRole("button", { name: /Locks in/ }).click();
+}
+
+export async function openSettings(page: Page, tab?: "General" | "Security" | "Account" | "Devices" | "Import & export") {
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: /Settings/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(dialog).toBeVisible();
+  if (tab) await dialog.getByRole("button", { name: tab, exact: true }).click();
+  return dialog;
+}
+
+export async function lockVault(page: Page) {
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: /Lock now/ }).click();
+  await expect(page.getByRole("heading", { name: "Unlock your vault" })).toBeVisible();
+}
+
+export async function logOut(page: Page) {
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: "Log out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
 }

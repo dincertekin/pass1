@@ -1,4 +1,4 @@
-import { addItem, expect, registerNewAccount, test, unlock } from "./fixtures";
+import { addItem, expect, openSettings, registerNewAccount, test, unlock } from "./fixtures";
 
 test("create, search, reveal, copy and favorite items", async ({ page }) => {
   await registerNewAccount(page);
@@ -89,7 +89,7 @@ test("a javascript: website is shown as text, never as a link", async ({ page })
 
 test("the password generator fills the field", async ({ page }) => {
   await registerNewAccount(page);
-  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByRole("button", { name: /Add a login/ }).click();
   await page.getByLabel("Name", { exact: true }).fill("Generated");
   await page.getByRole("button", { name: "Generate password" }).click();
   const output = page.locator("output");
@@ -97,4 +97,118 @@ test("the password generator fills the field", async ({ page }) => {
   const generated = (await output.textContent())!.trim();
   await page.getByRole("button", { name: "Use this password" }).click();
   await expect(page.getByLabel("Password", { exact: true })).toHaveValue(generated);
+});
+
+test("a new account sees the first-run screen, and it leads to import and adding items", async ({ page }) => {
+  await registerNewAccount(page);
+  await expect(page.getByText("1 of 4 done")).toBeVisible();
+
+  // People tick off the steps pass1 can't check itself.
+  await page.getByText("Store your master password somewhere safe offline").click();
+  await expect(page.getByText("2 of 4 done")).toBeVisible();
+
+  await page.getByRole("button", { name: /Import passwords/ }).click();
+  await expect(page.getByRole("dialog", { name: "Settings" }).getByRole("heading", { name: "Import & export" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await addItem(page, { name: "Gmail", password: "first-item-pass" });
+  await expect(page.getByRole("heading", { name: /Welcome to pass1/ })).toHaveCount(0);
+});
+
+test("password health finds reused and weak passwords", async ({ page }) => {
+  await registerNewAccount(page);
+  await addItem(page, { name: "Gmail", password: "orbit-lantern-quiet-47-shared" });
+  await addItem(page, { name: "Figma", password: "orbit-lantern-quiet-47-shared" });
+  await addItem(page, { name: "Netflix", password: "summer2021" });
+  await addItem(page, { name: "Bank", password: "Xp4$wN7!rQ2zL9m#kV" });
+
+  await page.getByRole("button", { name: /^Password health/ }).click();
+  await expect(page.getByRole("option")).toHaveText([/Figma.*Reused/, /Gmail.*Reused/, /Netflix.*Weak/]);
+
+  await page.getByRole("option", { name: /Gmail/ }).click();
+  await expect(page.getByText("This password is also used for Figma.")).toBeVisible();
+  await page.getByRole("option", { name: /Netflix/ }).click();
+  await expect(page.getByText("This password is easy to guess.")).toBeVisible();
+
+  // Fixing it removes the item from the list.
+  await page.getByRole("button", { name: "Change password" }).click();
+  await page.getByLabel("Password", { exact: true }).fill("velvet-canyon-drift-seventeen-owl");
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: /^Password health/ }).click();
+  await expect(page.getByRole("option")).toHaveCount(2);
+});
+
+test("import from a Chrome CSV export", async ({ page }) => {
+  await registerNewAccount(page);
+  const dialog = await openSettings(page, "Import & export");
+  await dialog.getByRole("button", { name: /Chrome, Edge or Safari/ }).click();
+
+  const csv = "name,url,username,password,note\ngithub.com,https://github.com,ada-dev,gh-secret-111,\nnetflix.com,https://netflix.com,ada@example.com,nf-secret-222,Family\n";
+  await expect(dialog.getByRole("heading", { name: /Import from Chrome/ })).toBeVisible();
+  await dialog.locator('input[type="file"]').setInputFiles({ name: "Chrome Passwords.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await expect(dialog.getByText(/Found\s+2\s+items/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Import 2 items" }).click();
+  await expect(dialog.getByText(/Imported 2 items\. Now delete the file/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await page.keyboard.press("Escape");
+
+  // Imported items show up straight away, without a reload.
+  await expect(page.getByRole("option")).toHaveText([/github\.com/, /netflix\.com/]);
+});
+
+test("appearance and density settings apply at once and are remembered", async ({ page }) => {
+  await registerNewAccount(page);
+  const dialog = await openSettings(page, "General");
+  await dialog.getByRole("button", { name: "Dark" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await unlock(page);
+  const again = await openSettings(page, "General");
+  await again.getByRole("button", { name: "System" }).click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme");
+});
+
+test("the item list can be resized by dragging, with the keyboard, and reset by double-click", async ({ page }) => {
+  await registerNewAccount(page);
+  await addItem(page, { name: "GitHub", password: "Xp4$wN7!rQ2zL9m#kV" });
+  const list = page.getByRole("region", { name: "Items" });
+  const divider = page.getByRole("separator", { name: "Resize the item list" });
+  expect(Math.round((await list.boundingBox())!.width)).toBe(340);
+
+  // Drag 120px to the right.
+  const handle = (await divider.boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2 + 120, handle.y + 200, { steps: 6 });
+  await page.mouse.up();
+  expect(Math.round((await list.boundingBox())!.width)).toBe(460);
+
+  // Remembered after a reload.
+  await page.reload();
+  await unlock(page);
+  await expect(page.getByRole("option", { name: /GitHub/ })).toBeVisible();
+  expect(Math.round((await list.boundingBox())!.width)).toBe(460);
+
+  // Keyboard: Home goes to the narrowest, arrows step by 16px.
+  await divider.focus();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowRight");
+  expect(Math.round((await list.boundingBox())!.width)).toBe(276);
+  await expect(divider).toHaveAttribute("aria-valuenow", "276");
+
+  await divider.dblclick();
+  expect(Math.round((await list.boundingBox())!.width)).toBe(340);
+});
+
+test("the item details always keep room, however far the list is dragged", async ({ page }) => {
+  await registerNewAccount(page);
+  await addItem(page, { name: "GitHub", password: "Xp4$wN7!rQ2zL9m#kV" });
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await page.getByRole("separator", { name: "Resize the item list" }).focus();
+  await page.keyboard.press("End");
+  const detail = (await page.locator("article").boundingBox())!;
+  expect(detail.width).toBeGreaterThanOrEqual(420);
 });

@@ -2,8 +2,11 @@
  * pass1 design tokens. This file is the single source of truth for colors, fonts and radii.
  *
  * Tailwind turns each token into utilities: --color-surface → bg-surface, text-surface, border-surface…
- * Dark mode works by redefining the same variables below, so components never need `dark:` classes.
  * Tailwind's default palette is removed on purpose: if a color isn't here, it isn't in the design.
+ *
+ * Every color is written as light-dark(<light>, <dark>). The browser picks one based on the
+ * page's color-scheme, which follows the system unless Settings → Appearance sets
+ * data-theme="light" or "dark" on <html> (see global.css). So components never need `dark:`.
  */
 @import "tailwindcss";
 
@@ -11,27 +14,35 @@
   --color-*: initial;
 
   /* Neutrals lean slightly blue-green, toward the Prussian accent */
-  --color-bg: #f4f6f5;
-  --color-surface: #ffffff;
-  --color-sunken: #ecefee;
-  --color-border: #d8dddb;
-  --color-border-strong: #bcc3c1;
-  --color-text: #15191c;
-  --color-muted: #5b646a;
+  --color-bg: light-dark(#f4f6f5, #0e1113);
+  --color-surface: light-dark(#ffffff, #15191c);
+  --color-sunken: light-dark(#ecefee, #0b0d0f);
+  --color-sidebar: light-dark(#eceeed, #111416);
+  --color-border: light-dark(#d8dddb, #262c30);
+  --color-border-strong: light-dark(#bcc3c1, #353d42);
+  --color-text: light-dark(#15191c, #e5e9ea);
+  --color-muted: light-dark(#5b646a, #8c969b);
 
   /* Accent: Prussian blue */
-  --color-accent: #1e4d78;
-  --color-accent-hover: #173d60;
-  --color-accent-soft: #e3ecf4;
-  --color-on-accent: #ffffff;
+  --color-accent: light-dark(#1e4d78, #79aadb);
+  --color-accent-hover: light-dark(#173d60, #98bfe6);
+  --color-accent-soft: light-dark(#e3ecf4, #17283a);
+  --color-accent-line: light-dark(#c9d6e3, #24405c);
+  --color-on-accent: light-dark(#ffffff, #0b1218);
 
-  /* Semantic colors: only for meaning (breach, reused, strong), never decoration */
-  --color-danger: #b42318;
-  --color-danger-soft: #fbe9e7;
-  --color-warning: #8f5b00;
-  --color-warning-soft: #faf0dc;
-  --color-success: #2c7046;
-  --color-success-soft: #e5f2ea;
+  /* Semantic colors: only for meaning (weak, reused, strong), never decoration */
+  --color-danger: light-dark(#b42318, #f07a6c);
+  --color-danger-soft: light-dark(#fbe9e7, #3a1714);
+  --color-danger-line: light-dark(#efc4bd, #5c2620);
+  --color-warning: light-dark(#8f5b00, #e2aa4c);
+  --color-warning-soft: light-dark(#faf0dc, #33250c);
+  --color-warning-line: light-dark(#e7cf9c, #574016);
+  --color-success: light-dark(#2c7046, #6cc490);
+  --color-success-soft: light-dark(#e5f2ea, #11291b);
+
+  /* Dims the page behind dialogs; shadows */
+  --color-scrim: light-dark(rgb(16 24 28 / 0.35), rgb(0 0 0 / 0.6));
+  --color-shadow: light-dark(rgb(16 24 28 / 0.1), rgb(0 0 0 / 0.5));
 
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -39,36 +50,29 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
+  --radius-xl: 14px;
 
-  --shadow-pop: 0 1px 2px rgb(16 24 28 / 0.06), 0 6px 20px rgb(16 24 28 / 0.08);
-
-  /* Dims the page behind dialogs */
-  --color-scrim: rgb(16 24 28 / 0.35);
+  --shadow-pop: 0 1px 2px var(--color-shadow), 0 8px 24px var(--color-shadow);
+  --shadow-dialog: 0 24px 60px var(--color-shadow);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0e1113;
-    --color-surface: #15191c;
-    --color-sunken: #0b0d0f;
-    --color-border: #262c30;
-    --color-border-strong: #353d42;
-    --color-text: #e5e9ea;
-    --color-muted: #8c969b;
-
-    --color-accent: #79aadb;
-    --color-accent-hover: #98bfe6;
-    --color-accent-soft: #17283a;
-    --color-on-accent: #0b1218;
-
-    --color-danger: #f07a6c;
-    --color-danger-soft: #3a1714;
-    --color-warning: #e2aa4c;
-    --color-warning-soft: #33250c;
-    --color-success: #6cc490;
-    --color-success-soft: #11291b;
-
-    --shadow-pop: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
-    --color-scrim: rgb(0 0 0 / 0.6);
-  }
+/*
+ * Item tiles: muted pairs, picked from the item's name (see vault/tiles.ts). They're used from
+ * inline styles, not utility classes, so `static` tells Tailwind to always include them.
+ */
+@theme static {
+  --color-tile-blue: light-dark(#1e4d78, #9cc0e6);
+  --color-tile-blue-bg: light-dark(#dfe8f2, #1a2a3b);
+  --color-tile-teal: light-dark(#1f6157, #8fd1c4);
+  --color-tile-teal-bg: light-dark(#dcefeb, #14302b);
+  --color-tile-plum: light-dark(#5b3a6e, #cdb1dd);
+  --color-tile-plum-bg: light-dark(#ece3f0, #2c2035);
+  --color-tile-ochre: light-dark(#7a5410, #e3c27f);
+  --color-tile-ochre-bg: light-dark(#f4ead8, #352a14);
+  --color-tile-brick: light-dark(#8c3a2b, #eba796);
+  --color-tile-brick-bg: light-dark(#f5e1dc, #3a1e18);
+  --color-tile-moss: light-dark(#3f6326, #b0d295);
+  --color-tile-moss-bg: light-dark(#e3eedb, #1f2e15);
+  --color-tile-slate: light-dark(#3b4752, #b8c3cd);
+  --color-tile-slate-bg: light-dark(#e4e8ec, #232a31);
 }

@@ -39,16 +39,8 @@ export interface ImportResult {
   stoppedBecause: string | null;
 }
 
-/**
- * Adds every item in the file to the vault. Existing items are left alone, so importing the
- * same file twice gives duplicates. Throws DecryptionError for a wrong export password.
- */
-export async function importVault(
-  vaultKey: CryptoKey,
-  fileText: string,
-  password: string,
-  onProgress: (done: number, total: number) => void,
-): Promise<ImportResult> {
+/** Reads a pass1 export. Throws DecryptionError for a wrong password. */
+export async function itemsFromPass1Export(fileText: string, password: string): Promise<VaultItem[]> {
   let json: unknown;
   try {
     json = JSON.parse(fileText);
@@ -57,8 +49,19 @@ export async function importVault(
   }
   const parsed = exportFileSchema.safeParse(json);
   if (!parsed.success) throw new InvalidExportFileError();
+  return openExport(parsed.data, password);
+}
 
-  const items = await openExport(parsed.data, password);
+/**
+ * Encrypts each item with this vault's key under a new ID and saves it. Existing items are left
+ * alone, so importing the same file twice gives duplicates. Stops early, with a reason, when the
+ * plan's limit is reached.
+ */
+export async function addItems(
+  vaultKey: CryptoKey,
+  items: VaultItem[],
+  onProgress: (done: number, total: number) => void,
+): Promise<ImportResult> {
   for (let i = 0; i < items.length; i++) {
     const id = newItemId();
     try {

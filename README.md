@@ -119,6 +119,7 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 - [x] Change master password: re-wrap the vault key and end all other sessions
 - [x] Encrypted export and import
+- [x] Import from Chrome, Edge, Safari, Bitwarden (CSV or JSON) and 1Password, read in the browser
 - [x] Active sessions list with revoke
 - [x] Delete account
 - **Done ✅:** after a password change, the old password can't log in and every item still decrypts
@@ -163,7 +164,8 @@ Each phase ends with something that works and has tests. Don't start a phase unt
 
 ### Later
 
-- [ ] Breach check (HIBP k-anonymity), reused and weak password report
+- [x] Password health: reused and weak passwords, found in the browser
+- [ ] Breach check (HIBP k-anonymity)
 - [ ] TOTP 2FA, passkeys
 - [ ] Browser extension
 

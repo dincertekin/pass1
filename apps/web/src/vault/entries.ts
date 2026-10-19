@@ -2,18 +2,22 @@ import type { VaultEntry } from "./vault-store";
 
 // Small pure helpers for showing entries. Kept here so the components stay about layout.
 
-export type Section = "all" | "favorites" | "trash";
+export type Section = "all" | "favorites" | "health" | "trash";
 
 export const SECTION_LABELS: Record<Section, string> = {
   all: "All items",
   favorites: "Favorites",
+  health: "Password health",
   trash: "Trash",
 };
 
-export function inSection(entry: VaultEntry, section: Section): boolean {
+/** `hasHealthIssue`: the item's password is weak or reused (see health.ts). */
+export function inSection(entry: VaultEntry, section: Section, hasHealthIssue = false): boolean {
   if (section === "trash") return entry.deletedAt !== null;
   if (entry.deletedAt !== null) return false;
-  return section === "all" || entry.item?.favorite === true;
+  if (section === "favorites") return entry.item?.favorite === true;
+  if (section === "health") return hasHealthIssue;
+  return true;
 }
 
 /** Search looks at name, website and username. Never at passwords or notes. */

@@ -1,13 +1,20 @@
 import { clsx } from "clsx";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Star } from "lucide-react";
 import type { KeyboardEvent, RefObject } from "react";
 import { Button } from "../components/ui/Button";
-import { displayName, hostOf, type Section } from "./entries";
+import { useSettings } from "../lib/settings";
+import { MOD_KEY } from "../lib/shortcuts";
+import { displayName, hostOf, SECTION_LABELS, type Section } from "./entries";
+import type { ItemHealth } from "./health";
+import { HealthChip } from "./HealthChip";
 import { ItemAvatar } from "./ItemAvatar";
 import type { VaultEntry } from "./vault-store";
 
-export function ItemList({ entries, section, query, onQueryChange, selectedId, onSelect, onOpen, onNew, searchRef }: {
+export function ItemList({ entries, total, health, section, query, onQueryChange, selectedId, onSelect, onOpen, onNew, searchRef }: {
   entries: VaultEntry[];
+  /** Items in the whole vault, for the search placeholder. */
+  total: number;
+  health: Map<string, ItemHealth>;
   section: Section;
   query: string;
   onQueryChange: (query: string) => void;
@@ -18,6 +25,8 @@ export function ItemList({ entries, section, query, onQueryChange, selectedId, o
   onNew: () => void;
   searchRef: RefObject<HTMLInputElement | null>;
 }) {
+  const { density } = useSettings();
+
   // Arrow keys move through the results without leaving the search box.
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     const index = entries.findIndex((entry) => entry.id === selectedId);
@@ -34,14 +43,15 @@ export function ItemList({ entries, section, query, onQueryChange, selectedId, o
   }
 
   return (
-    <section aria-label="Items" className="flex min-h-0 min-w-0 flex-1 flex-col border-border md:border-r">
-      <div className="flex gap-2 border-b border-border p-2.5">
-        <div className="flex h-8 flex-1 items-center gap-2 rounded-md border border-border-strong bg-surface px-2 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft">
+    <section aria-label="Items" className="flex min-h-0 min-w-0 flex-1 flex-col border-border bg-surface md:border-r">
+      {/* Phones have their own search in PhoneHeader, so this row is desktop only. */}
+      <div className="hidden gap-2 border-b border-border p-3 md:flex">
+        <label className="flex h-8.5 flex-1 items-center gap-2 rounded-md border border-border-strong bg-surface px-2.5 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft">
           <Search size={14} className="shrink-0 text-muted" aria-hidden="true" />
           <input
             ref={searchRef}
             type="search"
-            placeholder="Search vault"
+            placeholder={`Search ${total} item${total === 1 ? "" : "s"}`}
             aria-label="Search vault"
             autoComplete="off"
             value={query}
@@ -49,16 +59,25 @@ export function ItemList({ entries, section, query, onQueryChange, selectedId, o
             onKeyDown={handleKeyDown}
             className="h-full min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted"
           />
-          <kbd className="hidden rounded-sm border border-border bg-sunken px-1 font-mono text-[11px] text-muted sm:inline">/</kbd>
-        </div>
+          <kbd className="rounded-sm border border-border px-1 font-mono text-[11px] text-muted">{MOD_KEY}K</kbd>
+        </label>
+        {/* Desktop only; phones get the floating button. Wrapped, because the Button's own
+            display class would otherwise win over `hidden`. */}
         {section !== "trash" && (
-          <Button size="md" onClick={onNew} aria-label="New item" title="New item" className="px-2">
-            <Plus size={16} />
-          </Button>
+          <div className="hidden md:block">
+            <Button onClick={onNew} aria-label="New item" className="h-8.5">
+              <Plus size={15} strokeWidth={2.4} /> New
+            </Button>
+          </div>
         )}
       </div>
 
-      <div role="listbox" aria-label="Vault items" className="min-h-0 flex-1 overflow-y-auto p-1">
+      <div className="hidden items-baseline justify-between px-4 pt-3.5 pb-1.5 md:flex">
+        <h2 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{query ? "Search results" : SECTION_LABELS[section]}</h2>
+        <span className="text-xs text-muted">A–Z</span>
+      </div>
+
+      <div role="listbox" aria-label="Vault items" className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2 pb-2">
         {entries.length === 0 ? (
           <EmptyList section={section} query={query} />
         ) : (
@@ -70,7 +89,8 @@ export function ItemList({ entries, section, query, onQueryChange, selectedId, o
               aria-selected={entry.id === selectedId}
               onClick={() => onSelect(entry.id)}
               className={clsx(
-                "grid w-full cursor-pointer grid-cols-[28px_1fr] items-center gap-2.5 rounded-sm px-2 py-1.5 text-left",
+                "grid w-full cursor-pointer grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2.5 text-left",
+                density === "compact" ? "py-1" : "py-2",
                 entry.id === selectedId ? "bg-accent-soft" : "hover:bg-sunken",
               )}
             >
@@ -80,6 +100,10 @@ export function ItemList({ entries, section, query, onQueryChange, selectedId, o
                 <span className="block truncate text-xs text-muted">
                   {entry.item?.username || hostOf(entry.item?.url) || " "}
                 </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <HealthChip health={health.get(entry.id)} problemsOnly />
+                {entry.item?.favorite && <Star size={12} className="fill-accent text-accent" aria-label="Favorite" />}
               </span>
             </button>
           ))
@@ -96,6 +120,8 @@ function EmptyList({ section, query }: { section: Section; query: string }) {
       ? "Trash is empty."
       : section === "favorites"
         ? "Star an item to keep it here."
-        : "Your vault is empty. Add your first login with the + button.";
+        : section === "health"
+          ? "Nothing to fix. No weak or reused passwords."
+          : "Your vault is empty.";
   return <p className="px-3 py-8 text-center text-[13px] text-muted">{message}</p>;
 }

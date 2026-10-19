@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeUserAgent } from "./user-agent";
+import { describeUserAgent, isPhone } from "./user-agent";
 
 describe("describeUserAgent", () => {
   it.each([
@@ -14,5 +14,14 @@ describe("describeUserAgent", () => {
 
   it("handles a missing User-Agent", () => {
     expect(describeUserAgent(null)).toBe("Unknown device");
+  });
+});
+
+describe("isPhone", () => {
+  it("recognizes phones and tablets", () => {
+    expect(isPhone("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe(true);
+    expect(isPhone("Mozilla/5.0 (Linux; Android 15) Mobile Safari/537.36")).toBe(true);
+    expect(isPhone("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0.0.0")).toBe(false);
+    expect(isPhone(null)).toBe(false);
   });
 });

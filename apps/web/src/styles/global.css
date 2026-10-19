@@ -2,8 +2,15 @@
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 
+/* Follows the system, unless Settings → Appearance picks one (lib/appearance.ts). */
 :root {
   color-scheme: light dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
@@ -12,6 +19,26 @@ body {
 
 :focus-visible {
   @apply outline-2 outline-offset-2 outline-accent;
+}
+
+/* Dialogs, menus and popovers fade in. Radix sets data-state on them. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Scales with `transform`, which doesn't clash with the `translate` Tailwind uses for centering. */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+.animate-fade-in[data-state="open"] {
+  animation: fade-in 150ms ease-out;
+}
+.animate-pop-in[data-state="open"] {
+  animation: pop-in 150ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

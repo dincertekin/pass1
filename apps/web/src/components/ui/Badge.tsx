@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 const tones = {
   neutral: "bg-sunken text-muted",
   accent: "bg-accent-soft text-accent",
+  /** For the one thing on screen that should stand out most, e.g. the recommended plan. */
+  "accent-solid": "bg-accent text-on-accent",
   success: "bg-success-soft text-success",
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",

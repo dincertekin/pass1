@@ -53,6 +53,14 @@ describe("inSection", () => {
   });
 });
 
+describe("inSection: password health", () => {
+  it("lists items with an issue, never trashed ones", () => {
+    expect(inSection(entry(), "health", true)).toBe(true);
+    expect(inSection(entry(), "health", false)).toBe(false);
+    expect(inSection(entry({ deletedAt: 1 }), "health", true)).toBe(false);
+  });
+});
+
 describe("matchesQuery", () => {
   const item = entry({}, { name: "GitHub", username: "ada-dev", url: "github.com", password: "secret-hunter2", notes: "recovery codes" });
 

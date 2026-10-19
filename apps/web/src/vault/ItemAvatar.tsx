@@ -1,19 +1,28 @@
 import { clsx } from "clsx";
-import type { VaultEntry } from "./vault-store";
+import { useSettings } from "../lib/settings";
 import { displayName } from "./entries";
+import { tileStyle } from "./tiles";
+import type { VaultEntry } from "./vault-store";
 
-/** First letter of the item's name. No favicons: fetching one would tell a third party which sites you use. */
-export function ItemAvatar({ entry, size = "md" }: { entry: VaultEntry; size?: "md" | "lg" }) {
+const sizes = {
+  md: "size-9 rounded-lg text-[15px]",
+  lg: "size-13 rounded-xl text-[22px]",
+};
+
+/** A colored tile with the item's initial (see tiles.ts for why there are no site icons). */
+export function ItemAvatar({ entry, size = "md" }: { entry: VaultEntry; size?: keyof typeof sizes }) {
+  const { colorfulTiles } = useSettings();
+  if (!entry.item) {
+    return (
+      <span aria-hidden="true" className={clsx("grid shrink-0 place-items-center bg-danger-soft font-semibold text-danger", sizes[size])}>
+        !
+      </span>
+    );
+  }
+  const name = displayName(entry);
   return (
-    <span
-      aria-hidden="true"
-      className={clsx(
-        "grid shrink-0 place-items-center rounded-sm border border-border bg-sunken font-semibold text-muted",
-        size === "md" ? "size-7 text-xs" : "size-10 text-base",
-        !entry.item && "text-danger",
-      )}
-    >
-      {entry.item ? displayName(entry).charAt(0).toUpperCase() : "!"}
+    <span aria-hidden="true" className={clsx("grid shrink-0 place-items-center font-semibold", sizes[size])} style={tileStyle(name, colorfulTiles)}>
+      {name.charAt(0).toUpperCase()}
     </span>
   );
 }
