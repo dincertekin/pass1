@@ -72,117 +72,64 @@ npm run test:e2e    # builds, then runs the browser tests (uses your installed G
 
 Deploying to a server: [docs/deploy.md](docs/deploy.md).
 
+## Plans
+
+| | Free | pass1 Plus | pass1 Unlimited |
+|---|---|---|---|
+| Items / storage | 500 / 10 MB | 5,000 / 100 MB | Unlimited (1 GB fair-use cap) |
+| Yearly | $0 | $19 | $39 |
+| Monthly | | $2.49 | $4.49 |
+| Features | Everything in the vault | + TOTP codes, breach report, file attachments | + emergency access, priority support |
+
+Defined in one file, [packages/shared/src/plans.ts](packages/shared/src/plans.ts). The paid features in the last row aren't built yet (see To do).
+
 ## Roadmap
 
-Each phase ends with something that works and has tests. Don't start a phase until the previous one is done.
-
-### Phase 0: Foundation ✅
+### Done
 
 - [x] Monorepo (npm workspaces), TypeScript, CI
-- [x] Crypto package with tests: Argon2id, HKDF, vault key wrapping, AES-256-GCM items
-- [x] Design tokens (Tailwind), self-hosted mono font, base components (Button, Badge, TextField, PasswordField)
-
-### Phase 1: Database and auth API ✅
-
-- [x] Freeze crypto format v1 before any real data exists:
-  - a version field in every encrypted blob, so the format can be upgraded later
-  - item ID bound as AES-GCM associated data, so the server can't swap one item's ciphertext for another's
-  - padding items to fixed size buckets, so ciphertext size doesn't reveal password length
-- [x] `packages/shared`: zod schemas for every request and response, used by both the API and the web app
-- [x] Drizzle ORM with migrations (drizzle-kit); started on SQLite, moved to Postgres in Phase 6
-- [x] Tables: `users` (email, KDF salt and params, Argon2id hash of the auth key, wrapped vault key, plan) and `sessions`
-- [x] Config read from env and validated with zod at startup
-- [x] `POST /auth/prelogin`: returns the KDF salt and params; unknown emails get a stable fake salt so accounts can't be enumerated
-- [x] `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`
-- [x] Sessions: random token in an httpOnly, Secure, SameSite=Strict cookie, stored hashed in the database
-- [x] Rate limiting on auth routes, security headers
-- [x] Origin check on every request that changes data (on top of SameSite=Strict)
-- **Done ✅:** integration tests cover every route, including wrong password, duplicate email and rate limit
-
-### Phase 2: Auth UI ✅
-
-- [x] Routing (React Router) and a typed API client
-- [x] Register screen: strength meter (zxcvbn-ts) and the "no recovery" acknowledgment
-- [x] Unlock screen with Argon2id progress state
-- [x] Argon2id runs in a Web Worker so the page never freezes
-- [x] Keys live in memory only, never in localStorage; reloading the page locks the vault
-- **Done ✅:** register → log out → log in works in the browser
-
-### Phase 3: Vault ✅
-
-- [x] `vault_items` table (ciphertext only) and CRUD routes, scoped to the session's user
-- [x] Revision number per item, so a stale edit is rejected instead of overwriting newer data
-- [x] Three-pane vault: sidebar, searchable list, item detail; stacks on mobile
-- [x] Create, edit, delete (to Trash), favorites
-- [x] Keyboard: `/` or `⌘K` to search, arrows to move, `Enter` to open
-- [x] Plan limits enforced by the server on every create and edit: item count, total stored bytes, and a maximum size per item. Free plan: 500 items, 10 MB
-- [x] Usage meter in the sidebar (e.g. "312 of 500 items")
-- **Done ✅:** items survive a reload, the database contains no plaintext, and item 501 on the free plan is rejected
-
-### Phase 4: Everyday safety ✅
-
-- [x] Password generator (length, character sets, passphrases)
-- [x] Auto-lock after inactivity, configurable
-- [x] Copy with clipboard auto-clear and countdown toast
-- [x] Settings page
-- **Done ✅:** a locked vault holds no keys in memory, verified with Chrome heap snapshots (unlocked: vault key and item passwords present; locked: none)
-
-### Phase 5: Account management ✅
-
-- [x] Change master password: re-wrap the vault key and end all other sessions
-- [x] Encrypted export and import
-- [x] Import from Chrome, Edge, Safari, Bitwarden (CSV or JSON) and 1Password, read in the browser
-- [x] Active sessions list with revoke
-- [x] Delete account
-- **Done ✅:** after a password change, the old password can't log in and every item still decrypts
-
-### Phase 6: Production
-
-- [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce), verified with zero violations in Chrome
-- [x] API under `/api`, serving the built web app from the same origin
-- [x] Postgres everywhere: real Postgres in production, PGlite (Postgres in WebAssembly) in development and tests; CI also runs the API tests on Postgres 18
-- [x] End-to-end tests with Playwright (27 tests, every one also fails on any CSP violation), including the heap snapshot check that a locked vault holds no keys or plaintext
-- [x] Docker image (non-root, read-only filesystem, health check) and Compose stack: Caddy (HTTPS), app, Postgres, backups
-- [x] Daily backups, kept 14 days, never of an empty database; restore script; guide in [docs/deploy.md](docs/deploy.md)
-- [x] Health check that includes the database, JSON request logs without bodies, real client IPs behind the proxy
-- [ ] Error tracking (Sentry or similar, with nothing sensitive in reports)
-- [x] Security review of the whole app ([docs/security-review.md](docs/security-review.md)); findings fixed and tested
-- **Done when:** a fresh server can be deployed and restored from backup by following the docs. ✅ Done locally: data created over HTTPS, backed up, every volume deleted, restored onto a fresh stack, logged in, items decrypted
-
-### Phase 7: Plans and billing
-
-- [x] Three plans, defined in one config file (`packages/shared/src/plans.ts`); the paid features in the last row are built in later phases:
-
-  | | Free | pass1 Plus | pass1 Unlimited |
-  |---|---|---|---|
-  | Items / storage | 500 / 10 MB | 5,000 / 100 MB | Unlimited (1 GB fair-use cap) |
-  | Yearly | $0 | $19 | $39 |
-  | Monthly | | $2.49 | $4.49 |
-  | Features | Everything in the vault | + TOTP codes, breach report, file attachments | + emergency access, priority support |
-
-- [x] Paddle (merchant of record, handles VAT and sales tax) checkout and customer portal, with webhooks updating the user's plan. Webhooks are signature-checked, applied once, and ignored when out of order; deleting an account cancels its subscription first
-- [x] Paddle's script runs only on a separate checkout origin (`apps/checkout/`, served by Caddy with its own CSP), never where vaults are decrypted
-- [x] `subscriptions` table: provider IDs, status and renewal date only; no card details ever touch pass1
+- [x] Crypto: Argon2id, HKDF, a wrapped random vault key, AES-256-GCM items
+- [x] Versioned crypto format v1: item ID bound as associated data, items padded to 256-byte buckets, a pinned test vector
+- [x] Shared zod schemas for every request and response, used by the API and the web app
+- [x] Postgres with Drizzle migrations; PGlite (Postgres in WebAssembly) in development and tests, and CI also runs the API tests on Postgres 18
+- [x] Config from env, validated at startup
+- [x] Auth: prelogin with fake salts for unknown emails, register, login, logout; hashed session tokens in an httpOnly, Secure, SameSite=Strict cookie
+- [x] Rate limits, security headers, Origin check on every request that changes data, per-account login throttle
+- [x] Register screen with strength meter and "no recovery" acknowledgment; unlock screen; Argon2id in a Web Worker
+- [x] Keys in memory only; reloading or locking clears them, verified with Chrome heap snapshots
+- [x] Vault: create, edit, trash, restore, favorites, search, keyboard shortcuts; three panes with a resizable list, stacked on mobile
+- [x] Stale edits rejected by revision number instead of overwriting newer data
+- [x] Plan limits enforced by the server (items, total bytes, size per item), with a usage meter in the sidebar
+- [x] Password generator, auto-lock, clipboard auto-clear with countdown
+- [x] Password health: reused and weak passwords, found in the browser
+- [x] Settings in a dialog, including appearance and density
+- [x] Change master password (re-wraps the vault key, ends other sessions)
+- [x] Encrypted export and import; import from Chrome, Edge, Safari, Bitwarden and 1Password
+- [x] Active sessions list with revoke; account deletion
+- [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce)
+- [x] Playwright end-to-end tests, each one also failing on any CSP violation
+- [x] Docker image (non-root, read-only filesystem) and Compose stack: Caddy (HTTPS), app, Postgres, daily backups
+- [x] Backup and restore scripts, tested by restoring onto a fresh stack; guide in [docs/deploy.md](docs/deploy.md)
+- [x] Health check that includes the database, JSON request logs without bodies
+- [x] Security review of the whole app ([docs/security-review.md](docs/security-review.md)), findings fixed and tested
+- [x] Paddle checkout and customer portal; signed webhooks update the plan, applied once and in order
+- [x] Paddle's script runs only on a separate checkout origin, never where vaults are decrypted
+- [x] Downgrade or failed payment never deletes data: over the limit, the vault becomes read-only
 - [x] "Get pass1 Plus" in the sidebar and a plans dialog with yearly and monthly prices
-- [x] Downgrade or failed payment never deletes data: over the limit, the vault becomes read-only (view, copy, export and delete still work)
-- **Done when:** upgrade, renewal, cancel and failed payment are all covered by tests using the provider's test mode. Covered by API tests that feed the app Paddle-shaped, signed webhook events; ⏳ still to do: one real run through Paddle's sandbox (needs a Paddle account, see [docs/deploy.md](docs/deploy.md#billing-with-paddle))
 
-### Phase 8: Public launch
+### To do
 
+- [ ] One real checkout through Paddle's sandbox ([docs/deploy.md](docs/deploy.md#billing-with-paddle))
+- [ ] Paid features: TOTP codes, breach report (HIBP k-anonymity), file attachments, emergency access
+- [ ] Error tracking (Sentry or similar, with nothing sensitive in reports)
 - [ ] Email verification, privacy-friendly CAPTCHA and rate limits on sign-up
 - [ ] Landing page that explains the security model in plain words
-- [ ] Terms of service, privacy policy, GDPR data export and deletion
+- [ ] Terms of service and privacy policy
 - [ ] `security.txt`, a vulnerability disclosure policy, a status page
-- [ ] Published hash of every release, built reproducibly from the public source
-- [ ] Independent security audit, with the report published
-- **Done when:** the audit findings are fixed and sign-up is open
-
-### Later
-
-- [x] Password health: reused and weak passwords, found in the browser
-- [ ] Breach check (HIBP k-anonymity)
-- [ ] TOTP 2FA, passkeys
+- [ ] Reproducible builds, with a published hash of every release
+- [ ] TOTP 2FA and passkeys for logging in
 - [ ] Browser extension
+- [ ] Independent security audit, with the report published
 
 ## License
 
