@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img alt="pass1: passwords only you can read. Encrypted in your browser before they're sent; the server only stores ciphertext it can't open." src="docs/assets/banner-light.svg" width="100%">
+</picture>
+
 # pass1
 
 A zero-knowledge password manager for the web. Your vault is encrypted in the browser before it is sent anywhere, so the server only ever stores ciphertext it cannot read.
