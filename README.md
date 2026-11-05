@@ -9,6 +9,15 @@ A zero-knowledge password manager for the web. Your vault is encrypted in the br
 
 > 🚧 Work in progress. See the [roadmap](#roadmap).
 
+![The pass1 vault: a list of logins with password health badges, and one item open](docs/assets/screenshot-vault.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshot-register.png" alt="Creating a vault: a master password strength meter and a warning that there is no password reset"></td>
+    <td>Creating a vault. There is no password reset, because the server never sees the master password.<br><br><sub>Screenshots use demo data.</sub></td>
+  </tr>
+</table>
+
 ## How it works
 
 ```
