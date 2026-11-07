@@ -1,0 +1,18 @@
+# pass1
+
+> pass1 is a zero-knowledge, open-source password manager for the web, written in TypeScript. The vault is encrypted in the browser before it is sent anywhere, so the server only stores ciphertext it cannot read. MIT licensed. Work in progress.
+
+Key facts:
+
+- Cryptography: Argon2id derives a master key from the master password (never sent); HKDF-SHA256 splits it into an encryption key and an auth key; a random vault key, wrapped by the master key, encrypts each item with AES-256-GCM. Item names and URLs are encrypted too; items are padded to 256-byte buckets and bound to their IDs.
+- There is no account recovery: a lost master password means the vault cannot be decrypted.
+- Features: vault with search, favorites, trash, keyboard shortcuts; password generator; password health (reused and weak passwords); auto-lock; clipboard auto-clear; encrypted export and import; import from Chrome, Edge, Safari, Bitwarden and 1Password; active session list.
+- Security: strict Content Security Policy (no inline scripts, Trusted Types), rate limits, a published security review. No independent audit yet.
+- Self-hosting: one Linux server with Docker Compose (Caddy for HTTPS, the app, Postgres 18, daily backups).
+- Stack: React + Vite web app, Fastify API, Drizzle ORM on Postgres.
+
+## Docs
+
+- [README](https://github.com/dincertekin/pass1/blob/main/README.md): how it works, threat model, questions, roadmap
+- [Deploying pass1](https://github.com/dincertekin/pass1/blob/main/docs/deploy.md)
+- [Security review](https://github.com/dincertekin/pass1/blob/main/docs/security-review.md)

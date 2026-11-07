@@ -3,9 +3,35 @@
   <img alt="pass1: passwords only you can read. Encrypted in your browser before they're sent; the server only stores ciphertext it can't open." src="docs/assets/banner-light.svg" width="100%">
 </picture>
 
-# pass1
+<p align="center">
+  <a href="https://github.com/dincertekin/pass1/stargazers"><img src="https://img.shields.io/github/stars/dincertekin/pass1?style=flat&logo=github&color=111827" alt="GitHub stars"></a>
+  <a href="https://github.com/dincertekin/pass1/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dincertekin/pass1/ci.yml?label=tests" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111827" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/built%20with-TypeScript-111827?logo=typescript" alt="Built with TypeScript">
+</p>
 
-A zero-knowledge password manager for the web. Your vault is encrypted in the browser before it is sent anywhere, so the server only ever stores ciphertext it cannot read.
+<p align="center">
+  <b>Passwords only you can read.</b><br>
+  A zero-knowledge, open-source password manager that runs in your browser.
+</p>
+
+<p align="center">
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#threat-model">Threat model</a> ·
+  <a href="#questions">Questions</a> ·
+  <a href="docs/deploy.md">Self-hosting</a> ·
+  <a href="#roadmap">Roadmap</a> ·
+  <a href="#would-you-like-to-support-pass1">Support</a>
+</p>
+
+---
+
+pass1 is a **zero-knowledge password manager** for the web. Your vault is encrypted in the browser before it is sent anywhere, so the server only ever stores ciphertext it cannot read.
+
+- **Private:** encrypted on your device, with site names and URLs encrypted too. The server can't read your vault.
+- **Simple:** a clean vault with search, favorites, a password generator and password health checks.
+- **Careful:** standard cryptography only (Argon2id, AES-256-GCM), a strict Content Security Policy, and a published security review.
+- **Yours:** open source, and you can host it on your own server.
 
 > 🚧 Work in progress. See the [roadmap](#roadmap).
 
@@ -56,6 +82,32 @@ The latest security review, with every finding and accepted risk: [docs/security
 **What the server can see:** your email; how many items you have and their sizes (padded to 256 bytes); when each was created, changed or moved to the trash; and, for each logged-in device, the browser name and when it was last used. It never sees item names, websites, usernames, passwords or notes, and it doesn't log IP addresses.
 
 **There is no account recovery.** If the master password is lost, the vault cannot be decrypted. That is the point of zero knowledge.
+
+## Questions
+
+**Can the pass1 server read my passwords?**
+No. Your vault is encrypted in your browser with a key derived from your master password, which never leaves your device. The server stores only ciphertext (item names and websites included) and can't decrypt it. See [How it works](#how-it-works) and the [threat model](#threat-model).
+
+**What happens if I forget my master password?**
+Your vault can't be recovered, by anyone. There is no reset, because the server never knows your master password. Choose a long passphrase you'll remember, and keep a copy somewhere safe.
+
+**Is pass1 safe to use today?**
+It's a work in progress. The whole app has had a security review, with every finding fixed or written down in [docs/security-review.md](docs/security-review.md), but it hasn't had an independent audit yet. That's on the [roadmap](#roadmap).
+
+**Can I host it myself?**
+Yes. It runs on one Linux server with Docker Compose: HTTPS, the app, Postgres and daily backups. See [Deploying pass1](docs/deploy.md).
+
+**Can I import my passwords from another password manager?**
+Yes: from Chrome, Edge, Safari, Bitwarden and 1Password, and from pass1's own encrypted export.
+
+**Does it work on my phone?**
+Yes, in your phone's browser: the vault rearranges itself for small screens. There's no browser extension yet; it's on the roadmap.
+
+**Is it free?**
+The code is open source under the MIT license, and hosting it yourself costs nothing. A hosted service with free and paid [plans](#plans) is being prepared; the paid features aren't built yet.
+
+**How is it different from Bitwarden or 1Password?**
+At its core it works the same way: your vault is encrypted on your device. pass1 aims to be small and easy to review: one web app, standard cryptography only, a strict Content Security Policy, and a written threat model that says plainly what it doesn't protect against.
 
 ## Project structure
 
@@ -140,6 +192,29 @@ Defined in one file, [packages/shared/src/plans.ts](packages/shared/src/plans.ts
 - [ ] Browser extension
 - [ ] Independent security audit, with the report published
 
+## Contributing
+
+Issues and pull requests are welcome. Start with [Getting started](#getting-started); `npm test` runs everything. Please report security issues privately, not in a public issue.
+
+## Would you like to support pass1?
+
+pass1 is open source, and it stays open source. If you find it useful, you can:
+
+- **[Buy me a coffee](https://buymeacoffee.com/dincertekin)**: it keeps the work going.
+- **Give it a star** on GitHub, so more people find it.
+- **Tell a friend** who still reuses passwords.
+
+Thank you!
+
+## Star history
+
+<a href="https://star-history.com/#dincertekin/pass1&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dincertekin/pass1&type=Date&theme=dark">
+    <img alt="Star history" src="https://api.star-history.com/svg?repos=dincertekin/pass1&type=Date" width="600">
+  </picture>
+</a>
+
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) © Dinçer Tekin
