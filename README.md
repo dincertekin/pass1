@@ -4,7 +4,6 @@
 </picture>
 
 <p align="center">
-  <a href="https://github.com/dincertekin/pass1/stargazers"><img src="https://img.shields.io/github/stars/dincertekin/pass1?style=flat&logo=github&color=111827" alt="GitHub stars"></a>
   <a href="https://github.com/dincertekin/pass1/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dincertekin/pass1/ci.yml?label=tests" alt="Tests"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111827" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/built%20with-TypeScript-111827?logo=typescript" alt="Built with TypeScript">
@@ -104,7 +103,7 @@ Yes: from Chrome, Edge, Safari, Bitwarden and 1Password, and from pass1's own en
 Yes, in your phone's browser: the vault rearranges itself for small screens. There's no browser extension yet; it's on the roadmap.
 
 **Is it free?**
-The code is open source under the MIT license, and hosting it yourself costs nothing. A hosted service with free and paid [plans](#plans) is being prepared; the paid features aren't built yet.
+The code is open source under the MIT license, and hosting it yourself costs nothing. A hosted service with free and paid [plans](docs/plans.md) is being prepared; the paid features aren't built yet.
 
 **How is it different from Bitwarden or 1Password?**
 At its core it works the same way: your vault is encrypted on your device. pass1 aims to be small and easy to review: one web app, standard cryptography only, a strict Content Security Policy, and a written threat model that says plainly what it doesn't protect against.
@@ -133,52 +132,9 @@ npm run test:e2e    # builds, then runs the browser tests (uses your installed G
 
 Deploying to a server: [docs/deploy.md](docs/deploy.md).
 
-## Plans
-
-| | Free | pass1 Plus | pass1 Unlimited |
-|---|---|---|---|
-| Items / storage | 500 / 10 MB | 5,000 / 100 MB | Unlimited (1 GB fair-use cap) |
-| Yearly | $0 | $19 | $39 |
-| Monthly | | $2.49 | $4.49 |
-| Features | Everything in the vault | + TOTP codes, breach report, file attachments | + emergency access, priority support |
-
-Defined in one file, [packages/shared/src/plans.ts](packages/shared/src/plans.ts). The paid features in the last row aren't built yet (see To do).
-
 ## Roadmap
 
-### Done
-
-- [x] Monorepo (npm workspaces), TypeScript, CI
-- [x] Crypto: Argon2id, HKDF, a wrapped random vault key, AES-256-GCM items
-- [x] Versioned crypto format v1: item ID bound as associated data, items padded to 256-byte buckets, a pinned test vector
-- [x] Shared zod schemas for every request and response, used by the API and the web app
-- [x] Postgres with Drizzle migrations; PGlite (Postgres in WebAssembly) in development and tests, and CI also runs the API tests on Postgres 18
-- [x] Config from env, validated at startup
-- [x] Auth: prelogin with fake salts for unknown emails, register, login, logout; hashed session tokens in an httpOnly, Secure, SameSite=Strict cookie
-- [x] Rate limits, security headers, Origin check on every request that changes data, per-account login throttle
-- [x] Register screen with strength meter and "no recovery" acknowledgment; unlock screen; Argon2id in a Web Worker
-- [x] Keys in memory only; reloading or locking clears them, verified with Chrome heap snapshots
-- [x] Vault: create, edit, trash, restore, favorites, search, keyboard shortcuts; three panes with a resizable list, stacked on mobile
-- [x] Stale edits rejected by revision number instead of overwriting newer data
-- [x] Plan limits enforced by the server (items, total bytes, size per item), with a usage meter in the sidebar
-- [x] Password generator, auto-lock, clipboard auto-clear with countdown
-- [x] Password health: reused and weak passwords, found in the browser
-- [x] Settings in a dialog, including appearance and density
-- [x] Change master password (re-wraps the vault key, ends other sessions)
-- [x] Encrypted export and import; import from Chrome, Edge, Safari, Bitwarden and 1Password
-- [x] Active sessions list with revoke; account deletion
-- [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce)
-- [x] Playwright end-to-end tests, each one also failing on any CSP violation
-- [x] Docker image (non-root, read-only filesystem) and Compose stack: Caddy (HTTPS), app, Postgres, daily backups
-- [x] Backup and restore scripts, tested by restoring onto a fresh stack; guide in [docs/deploy.md](docs/deploy.md)
-- [x] Health check that includes the database, JSON request logs without bodies
-- [x] Security review of the whole app ([docs/security-review.md](docs/security-review.md)), findings fixed and tested
-- [x] Paddle checkout and customer portal; signed webhooks update the plan, applied once and in order
-- [x] Paddle's script runs only on a separate checkout origin, never where vaults are decrypted
-- [x] Downgrade or failed payment never deletes data: over the limit, the vault becomes read-only
-- [x] "Get pass1 Plus" in the sidebar and a plans dialog with yearly and monthly prices
-
-### To do
+The app itself is built: vault, crypto, import and export, sessions, a strict CSP, end-to-end tests, Docker deployment and a security review. The full list is in [What's built](docs/progress.md). Next:
 
 - [ ] One real checkout through Paddle's sandbox ([docs/deploy.md](docs/deploy.md#billing-with-paddle))
 - [ ] Paid features: TOTP codes, breach report (HIBP k-anonymity), file attachments, emergency access
@@ -194,7 +150,7 @@ Defined in one file, [packages/shared/src/plans.ts](packages/shared/src/plans.ts
 
 ## Contributing
 
-Issues and pull requests are welcome. Start with [Getting started](#getting-started); `npm test` runs everything. Please report security issues privately, not in a public issue.
+Issues and pull requests are welcome. Start with [Getting started](#getting-started); `npm test` runs everything. Please report security issues privately, as described in [SECURITY.md](SECURITY.md), not in a public issue.
 
 ## Would you like to support pass1?
 
@@ -205,15 +161,6 @@ pass1 is open source, and it stays open source. If you find it useful, you can:
 - **Tell a friend** who still reuses passwords.
 
 Thank you!
-
-## Star history
-
-<a href="https://star-history.com/#dincertekin/pass1&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dincertekin/pass1&type=Date&theme=dark">
-    <img alt="Star history" src="https://api.star-history.com/svg?repos=dincertekin/pass1&type=Date" width="600">
-  </picture>
-</a>
 
 ## License
 
