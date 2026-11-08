@@ -4,10 +4,9 @@
 </picture>
 
 <p align="center">
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/typescript-dark.svg"><img src="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/typescript-light.svg" alt="TypeScript" height="28"></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/react-dark.svg"><img src="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/react-light.svg" alt="React" height="28"></picture>
-  <a href="docs/deploy.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/self-hosted-dark.svg"><img src="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/self-hosted-light.svg" alt="Self-hosted" height="28"></picture></a>
-  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/mit-dark.svg"><img src="https://raw.githubusercontent.com/dincertekin/dincertekin/main/assets/badges/mit-light.svg" alt="MIT license" height="28"></picture></a>
+  <a href="https://github.com/dincertekin/pass1/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dincertekin/pass1/ci.yml?label=tests" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111827" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/built%20with-TypeScript-111827?logo=typescript" alt="Built with TypeScript">
 </p>
 
 <p align="center">
