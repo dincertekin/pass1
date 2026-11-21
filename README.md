@@ -77,6 +77,7 @@ The latest security review, with every finding and accepted risk: [docs/security
 | A malicious server operator reading vaults | A compromised server serving malicious JavaScript (a limit of every web-based password manager) |
 | Traffic interception | Weak master passwords (Argon2id slows guessing but can't prevent it) |
 | Guessing a master password through the login form, from one machine or many | A malicious server rolling an item back to an older version, or hiding an item |
+| Creating accounts in bulk cheaply: each sign-up costs about a second of computing | |
 
 **What the server can see:** your email; how many items you have and their sizes (padded to 256 bytes); when each was created, changed, moved to the trash or deleted (the IDs of deleted items are kept, so your other devices can remove them too); and, for each logged-in device, the browser name and when it was last used. It never sees item names, websites, usernames, passwords or notes, and it doesn't log IP addresses.
 
@@ -139,7 +140,7 @@ The app itself is built: vault, crypto, import and export, sessions, a strict CS
 - [ ] One real checkout through Paddle's sandbox ([docs/deploy.md](docs/deploy.md#billing-with-paddle))
 - [ ] Paid features: TOTP codes, breach report (HIBP k-anonymity), file attachments, emergency access
 - [ ] Error tracking (Sentry or similar, with nothing sensitive in reports)
-- [ ] Email verification, privacy-friendly CAPTCHA and rate limits on sign-up
+- [ ] Email verification on sign-up
 - [ ] Landing page that explains the security model in plain words
 - [ ] Terms of service and privacy policy
 - [ ] `security.txt`, a vulnerability disclosure policy, a status page

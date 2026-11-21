@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { authKeySchema, encryptedBlobSchema, kdfParamsSchema, kdfSaltSchema } from "./crypto";
 import { PLAN_IDS } from "./plans";
+import { proofOfWorkSchema } from "./proof-of-work";
 
 // Request and response bodies for /auth/*. The API validates requests with these,
 // and the web app uses the inferred types, so both sides always agree.
@@ -23,6 +24,8 @@ export const registerRequestSchema = z.object({
   kdfSalt: kdfSaltSchema,
   kdfParams: kdfParamsSchema,
   wrappedVaultKey: encryptedBlobSchema,
+  // A solved puzzle from GET /auth/challenge, so creating accounts in bulk costs real computing time.
+  proofOfWork: proofOfWorkSchema,
 });
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 

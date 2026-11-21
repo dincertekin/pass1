@@ -11,6 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { api, ApiRequestError, setSessionEndedHandler } from "../lib/api";
 import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
+import { solveSignUpPuzzle } from "../lib/proof-of-work";
 
 // Who is logged in, and whether the vault is open.
 //
@@ -68,9 +69,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const actions: SessionActions = {
     async register(email, masterPassword) {
       const kdfSalt = generateSalt();
-      const { authKey, encryptionKey } = await deriveKeysInWorker(masterPassword, kdfSalt, DEFAULT_KDF_PARAMS);
+      // Both are slow on purpose and run in their own workers, so side by side they cost one wait.
+      const [{ authKey, encryptionKey }, proofOfWork] = await Promise.all([
+        deriveKeysInWorker(masterPassword, kdfSalt, DEFAULT_KDF_PARAMS),
+        solveSignUpPuzzle(),
+      ]);
       const { vaultKey, wrappedVaultKey } = await createVaultKey(encryptionKey);
-      const account = await api.register({ email, authKey, kdfSalt, kdfParams: DEFAULT_KDF_PARAMS, wrappedVaultKey });
+      const account = await api.register({ email, authKey, kdfSalt, kdfParams: DEFAULT_KDF_PARAMS, wrappedVaultKey, proofOfWork });
       setSession({ status: "unlocked", account, vaultKey });
     },
 

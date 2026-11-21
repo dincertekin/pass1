@@ -7,8 +7,11 @@
 // While an account is blocked, every login for it is refused, the right password included.
 // Otherwise the guessing would go on and succeed the moment it hit the password. The cost: an
 // attacker can stop someone logging in on a new device for a while. Devices that are already
-// logged in, and unlocking (which never contacts the server), keep working. Phase 8's CAPTCHA
-// can replace the hard block later.
+// logged in, and unlocking (which never contacts the server), keep working.
+//
+// A puzzle (like the sign-up one in proof-of-work.ts) must not replace this block. A puzzle only
+// costs computing time, so someone with many machines could keep guessing for as long as they
+// like. The block caps guesses at a fixed number, however much computing power is behind them.
 //
 // Unknown emails are counted the same way, so the block can't reveal which accounts exist.
 // Counts live in memory: fine for one server; several servers would need a shared store.

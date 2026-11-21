@@ -34,8 +34,8 @@ Before building on it, prove the web app is ready.
 
 - [x] Run `npm run test:e2e` and fix anything that fails. (All passed; CI already runs them on every push.)
 - [ ] One real Paddle sandbox checkout (already on the README roadmap).
-- [ ] Email verification and sign-up CAPTCHA (closes accepted risks A and B). Every new client increases sign-ups, so this comes first.
-  - Decided: email goes out over SMTP (any provider, or the self-hoster's own), and the CAPTCHA is a self-hosted proof-of-work puzzle solved in a Web Worker. No third-party script runs where vaults are decrypted.
+- [x] Sign-up CAPTCHA: a self-hosted proof-of-work puzzle solved in a Web Worker. No third-party script runs where vaults are decrypted. It doesn't replace the login block (accepted risk B), because a puzzle only costs computing time and the block caps guesses.
+- [ ] Email verification (closes accepted risk A), sent over SMTP: any provider, or the self-hoster's own. Every new client increases sign-ups, so this comes first.
 - [x] Incremental sync instead of `GET /api/vault/items` returning everything (accepted risk F). Phones on slow networks need this, and so does the offline cache later.
 
 **Done when:** browser tests pass in CI, and a test card upgrades a sandbox account.

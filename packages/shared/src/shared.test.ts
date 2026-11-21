@@ -5,6 +5,7 @@ import {
   emailSchema,
   encryptedBlobSchema,
   exportFileSchema,
+  hasLeadingZeroBits,
   kdfParamsSchema,
   kdfSaltSchema,
   MAX_ITEM_CIPHERTEXT_BYTES,
@@ -99,5 +100,19 @@ describe("exportFileSchema", () => {
 
   it("rejects other files", () => {
     expect(exportFileSchema.safeParse({ format: "bitwarden" }).success).toBe(false);
+  });
+});
+
+describe("Checking a solved sign-up puzzle", () => {
+  it("counts zero bits across whole bytes and into the next one", () => {
+    const digest = new Uint8Array([0x00, 0x00, 0b0001_1111, 0xff]);
+    expect(hasLeadingZeroBits(digest, 16)).toBe(true);
+    expect(hasLeadingZeroBits(digest, 19)).toBe(true);
+    expect(hasLeadingZeroBits(digest, 20)).toBe(false);
+  });
+
+  it("refuses a hash whose first byte isn't zero", () => {
+    expect(hasLeadingZeroBits(new Uint8Array([0b1000_0000, 0]), 1)).toBe(false);
+    expect(hasLeadingZeroBits(new Uint8Array([0b0111_1111, 0]), 1)).toBe(true);
   });
 });

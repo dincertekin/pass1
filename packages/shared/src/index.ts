@@ -5,3 +5,4 @@ export * from "./plans";
 export * from "./vault";
 export * from "./account";
 export * from "./billing";
+export * from "./proof-of-work";

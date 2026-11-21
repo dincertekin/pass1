@@ -144,6 +144,16 @@ export const webhookEvents = pgTable("webhook_events", {
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Sign-up puzzles already used, so one solution can't create many accounts.
+ * Kept until the challenge would have expired anyway, then deleted (see server.ts).
+ */
+export const usedChallenges = pgTable("used_challenges", {
+  // The challenge's random part. Says nothing about who solved it.
+  id: text("id").primaryKey(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type VaultItemRow = typeof vaultItems.$inferSelect;

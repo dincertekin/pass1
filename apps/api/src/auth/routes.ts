@@ -3,6 +3,7 @@ import {
   preloginRequestSchema,
   registerRequestSchema,
   type AccountResponse,
+  type ChallengeResponse,
   type PreloginResponse,
 } from "@pass1/shared";
 import { eq } from "drizzle-orm";
@@ -14,6 +15,7 @@ import { ApiError, parseBody } from "../errors.js";
 import { loginFailureRule, rateLimits } from "../rate-limits.js";
 import { LoginThrottle } from "./login-throttle.js";
 import { hashAuthKey, verifyAgainstDummy, verifyAuthKey } from "./password.js";
+import { checkProofOfWork, createChallenge, PROOF_OF_WORK_RESULT, type ProofOfWorkResult } from "./proof-of-work.js";
 import { endSession, requireUser, startSession } from "./sessions.js";
 
 // Same as DEFAULT_KDF_PARAMS in @pass1/crypto. Shown to unknown emails at prelogin,
@@ -38,8 +40,19 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     return { kdfSalt: user.kdfSalt, kdfParams: kdfParamsOf(user) };
   });
 
+  /** A sign-up puzzle for the browser to solve (see auth/proof-of-work.ts). */
+  app.get("/auth/challenge", { config: { rateLimit: limits.challenge } }, async (): Promise<ChallengeResponse> => {
+    return createChallenge(config);
+  });
+
   app.post("/auth/register", { config: { rateLimit: limits.register } }, async (request, reply) => {
     const body = parseBody(registerRequestSchema, request.body);
+
+    // Before anything else, and before the expensive Argon2 hash below.
+    const proofResult = await checkProofOfWork(config, db, body.proofOfWork);
+    if (proofResult !== PROOF_OF_WORK_RESULT.OK) {
+      throw new ApiError(403, "PROOF_OF_WORK_FAILED", proofOfWorkMessage(proofResult));
+    }
 
     // This does reveal that an email is registered. Email verification (Phase 8) will fix it:
     // registering will always say "check your inbox", and the email will say what happened.
@@ -143,4 +156,10 @@ function isUniqueViolation(err: unknown): boolean {
   const codeOf = (e: unknown) => (e as { code?: unknown } | undefined)?.code;
   // 23505 is Postgres's code for unique_violation.
   return [err, (err as { cause?: unknown })?.cause].some((e) => codeOf(e) === "23505");
+}
+
+/** What the person sees when the sign-up check fails. Input: a result other than OK. */
+function proofOfWorkMessage(result: ProofOfWorkResult): string {
+  if (result === PROOF_OF_WORK_RESULT.EXPIRED) return "The sign-up check took too long. Create the account again.";
+  return "The sign-up check failed. Reload the page and create the account again.";
 }

@@ -37,6 +37,10 @@ const envSchema = z
     RATE_LIMITS: z.enum(["strict", "relaxed"]).default("strict"),
     // Used to derive stable fake salts for unknown emails at prelogin (see routes/auth.ts).
     PRELOGIN_SECRET: z.string().min(32).default(DEV_PRELOGIN_SECRET),
+    // How hard the sign-up puzzle is (see auth/proof-of-work.ts). Each bit doubles the work:
+    // 19 takes about half a second on a laptop and two on a slow phone. Production refuses
+    // less than 16. Tests use 1 so they don't spend seconds solving puzzles.
+    PROOF_OF_WORK_BITS: z.coerce.number().int().min(1).max(28).default(19),
 
     // Billing with Paddle (see billing/). Leave all of these unset to run without billing:
     // the app then says upgrades aren't open yet. Setting only some of them is an error.
@@ -52,6 +56,10 @@ const envSchema = z
   .refine((env) => env.NODE_ENV !== "production" || env.PRELOGIN_SECRET !== DEV_PRELOGIN_SECRET, {
     message: "PRELOGIN_SECRET must be set in production",
     path: ["PRELOGIN_SECRET"],
+  })
+  .refine((env) => env.NODE_ENV !== "production" || env.PROOF_OF_WORK_BITS >= 16, {
+    message: "PROOF_OF_WORK_BITS must be at least 16 in production",
+    path: ["PROOF_OF_WORK_BITS"],
   })
   .refine((env) => env.NODE_ENV !== "production" || env.RATE_LIMITS === "strict", {
     message: "RATE_LIMITS=relaxed is only for tests",

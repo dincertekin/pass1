@@ -47,6 +47,10 @@ export default defineConfig({
       WEB_ORIGIN: BASE_URL,
       // Each test registers an account, which the normal limit (5 per hour) wouldn't allow.
       RATE_LIMITS: "relaxed",
+      // Every test signs up while three others run beside it. At the real 19 bits that
+      // sometimes takes over 5 seconds here, and longer on CI. 12 bits still runs the whole
+      // puzzle (worker, hash-wasm, CSP); the API tests check that easy puzzles are refused.
+      PROOF_OF_WORK_BITS: "12",
     },
   },
 });

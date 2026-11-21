@@ -1,4 +1,5 @@
-import { randomBytes } from "node:crypto";
+import { hasLeadingZeroBits, proofOfWorkInput, type ChallengeResponse } from "@pass1/shared";
+import { createHash, randomBytes } from "node:crypto";
 import { buildApp, type AppDeps } from "./app.js";
 import { loadConfig } from "./config.js";
 import { eq, sql } from "drizzle-orm";
@@ -15,13 +16,14 @@ let shared: Database | null = null;
 
 export async function emptyTestDatabase(): Promise<Db> {
   shared ??= await openDatabase(TEST_DATABASE_URL);
-  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, subscriptions, billing_checkouts, webhook_events cascade`);
+  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, used_challenges, subscriptions, billing_checkouts, webhook_events cascade`);
   return shared.db;
 }
 
 /** A fresh app on an empty database. `deps` swaps in fakes, e.g. a Paddle client. */
 export async function createTestApp(env: Record<string, string> = {}, deps: Partial<AppDeps> = {}) {
-  const config = loadConfig({ NODE_ENV: "test", DATABASE_URL: TEST_DATABASE_URL, ...env });
+  // One-bit puzzles: solving them takes a couple of hashes, so tests stay fast.
+  const config = loadConfig({ NODE_ENV: "test", DATABASE_URL: TEST_DATABASE_URL, PROOF_OF_WORK_BITS: "1", ...env });
   const db = await emptyTestDatabase();
   return { app: await buildApp({ config, db, ...deps }), db, config };
 }
@@ -35,19 +37,35 @@ export const SESSION_COOKIE = "pass1_session";
 // of the right sizes. That keeps them fast.
 export const b64 = (bytes: number) => randomBytes(bytes).toString("base64");
 
-export function registerBody(email = "ada@example.com", authKey = b64(32)) {
+/** Tries nonces until one works, like the browser does. Input: a challenge from the API. */
+export function solveChallenge({ challenge, difficultyBits }: ChallengeResponse) {
+  for (let nonce = 0; ; nonce++) {
+    const digest = createHash("sha256").update(proofOfWorkInput(challenge, nonce)).digest();
+    if (hasLeadingZeroBits(digest, difficultyBits)) return { challenge, nonce };
+  }
+}
+
+/** Asks the app for a sign-up puzzle and solves it. */
+export async function solvedProofOfWork(app: TestApp) {
+  const res = await app.inject({ method: "GET", url: "/api/auth/challenge" });
+  return solveChallenge(res.json());
+}
+
+/** A valid registration, sign-up puzzle included. */
+export async function registerBody(app: TestApp, email = "ada@example.com", authKey = b64(32)) {
   return {
     email,
     authKey,
     kdfSalt: b64(16),
     kdfParams: { memoryKiB: 65536, iterations: 3, parallelism: 1 },
     wrappedVaultKey: { v: 1, iv: b64(12), ciphertext: b64(48) },
+    proofOfWork: await solvedProofOfWork(app),
   };
 }
 
 /** Registers a user and returns a function that sends requests as them. */
 export async function loggedInAs(app: TestApp, email = "ada@example.com") {
-  const body = registerBody(email);
+  const body = await registerBody(app, email);
   const res = await app.inject({ method: "POST", url: "/api/auth/register", payload: body, headers: ORIGIN });
   if (res.statusCode !== 201) throw new Error(`register failed: ${res.body}`);
   const token = res.cookies.find((c) => c.name === SESSION_COOKIE)!.value;

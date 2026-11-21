@@ -23,6 +23,10 @@ describe("loadConfig", () => {
     expect(loadConfig({ ...PROD, ...empty }).PADDLE_API_KEY).toBeUndefined();
   });
 
+  it("refuses an easy sign-up puzzle in production", () => {
+    expect(() => loadConfig({ ...PROD, PROOF_OF_WORK_BITS: "8" })).toThrow(/PROOF_OF_WORK_BITS must be at least 16/);
+  });
+
   it("refuses PGlite in production", () => {
     expect(() => loadConfig({ ...PROD, DATABASE_URL: "pglite:./data/pglite" })).toThrow(/must be a postgres:\/\/ URL in production/);
   });

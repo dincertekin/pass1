@@ -1,5 +1,6 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
+import { deleteExpiredChallenges } from "./auth/proof-of-work.js";
 import { deleteExpiredSessions } from "./auth/sessions.js";
 import { openDatabase } from "./db/client.js";
 
@@ -12,12 +13,17 @@ app.listen({ port: config.PORT, host: config.HOST }).catch((err) => {
   process.exit(1);
 });
 
-// Expired sessions are useless; remove them once an hour. unref() lets the process exit anyway.
+// Expired sessions and sign-up puzzles are useless; remove them once an hour.
+// unref() lets the process exit anyway.
 const ONE_HOUR = 60 * 60 * 1000;
 setInterval(() => {
   deleteExpiredSessions(db).then(
     (count) => count > 0 && app.log.info({ count }, "deleted expired sessions"),
     (err) => app.log.error(err, "deleting expired sessions failed"),
+  );
+  deleteExpiredChallenges(db).then(
+    (count) => count > 0 && app.log.info({ count }, "deleted expired sign-up challenges"),
+    (err) => app.log.error(err, "deleting expired sign-up challenges failed"),
   );
 }, ONE_HOUR).unref();
 

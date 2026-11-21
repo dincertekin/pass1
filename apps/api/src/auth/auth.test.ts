@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sessions, users } from "../db/schema.js";
-import { b64, createTestApp, ORIGIN, registerBody, SESSION_COOKIE as COOKIE } from "../test-helpers.js";
+import { hasLeadingZeroBits, proofOfWorkInput } from "@pass1/shared";
+import { createHash } from "node:crypto";
+import { b64, createTestApp, ORIGIN, registerBody, solveChallenge, SESSION_COOKIE as COOKIE } from "../test-helpers.js";
+import { createChallenge } from "./proof-of-work.js";
 import { deleteExpiredSessions } from "./sessions.js";
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -19,7 +22,7 @@ function sessionCookie(res: { cookies: { name: string; value: string }[] }) {
 }
 
 async function registered(email = "ada@example.com") {
-  const body = registerBody(email);
+  const body = await registerBody(ctx.app, email);
   const res = await post("/api/auth/register", body);
   expect(res.statusCode).toBe(201);
   return { body, token: sessionCookie(res)!.value };
@@ -27,7 +30,7 @@ async function registered(email = "ada@example.com") {
 
 describe("POST /auth/register", () => {
   it("creates the account, starts a session and returns what the browser needs to unlock", async () => {
-    const body = registerBody();
+    const body = await registerBody(ctx.app);
     const res = await post("/api/auth/register", body);
 
     expect(res.statusCode).toBe(201);
@@ -43,7 +46,7 @@ describe("POST /auth/register", () => {
   });
 
   it("stores an Argon2id hash of the auth key, never the auth key itself", async () => {
-    const body = registerBody();
+    const body = await registerBody(ctx.app);
     await post("/api/auth/register", body);
 
     const user = (await ctx.db.select().from(users))[0]!;
@@ -60,20 +63,20 @@ describe("POST /auth/register", () => {
 
   it("rejects a second account for the same email, ignoring case", async () => {
     await registered("ada@example.com");
-    const res = await post("/api/auth/register", registerBody("ADA@Example.com"));
+    const res = await post("/api/auth/register", await registerBody(ctx.app, "ADA@Example.com"));
     expect(res.statusCode).toBe(409);
     expect(res.json().error.code).toBe("EMAIL_TAKEN");
   });
 
   it("rejects KDF settings weaker than the minimum", async () => {
-    const res = await post("/api/auth/register", { ...registerBody(), kdfParams: { memoryKiB: 1024, iterations: 1, parallelism: 1 } });
+    const res = await post("/api/auth/register", { ...(await registerBody(ctx.app)), kdfParams: { memoryKiB: 1024, iterations: 1, parallelism: 1 } });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatchObject({ code: "VALIDATION_FAILED", message: expect.stringContaining("kdfParams") });
   });
 
   it("is rate limited", async () => {
-    for (let i = 0; i < 5; i++) await post("/api/auth/register", registerBody(`user${i}@example.com`));
-    const res = await post("/api/auth/register", registerBody("one-too-many@example.com"));
+    for (let i = 0; i < 5; i++) await post("/api/auth/register", await registerBody(ctx.app, `user${i}@example.com`));
+    const res = await post("/api/auth/register", await registerBody(ctx.app, "one-too-many@example.com"));
     expect(res.statusCode).toBe(429);
     expect(res.json().error.code).toBe("RATE_LIMITED");
   });
@@ -163,10 +166,82 @@ describe("POST /auth/logout", () => {
   });
 });
 
+describe("Proving a person is signing up", () => {
+  async function registerWith(proofOfWork: unknown) {
+    return post("/api/auth/register", { ...(await registerBody(ctx.app)), proofOfWork });
+  }
+
+  async function accountCount() {
+    return (await ctx.db.select().from(users)).length;
+  }
+
+  it("hands out a puzzle without needing an account", async () => {
+    const res = await ctx.app.inject({ method: "GET", url: "/api/auth/challenge" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ challenge: expect.any(String), difficultyBits: 1 });
+  });
+
+  it("refuses an account without a solved puzzle", async () => {
+    const res = await registerWith(undefined);
+    expect(res.statusCode).toBe(400);
+    expect(await accountCount()).toBe(0);
+  });
+
+  it("refuses an answer that doesn't solve the puzzle, and creates no account", async () => {
+    const { challenge, difficultyBits } = createChallenge(ctx.config);
+    let nonce = 0;
+    while (hasLeadingZeroBits(createHash("sha256").update(proofOfWorkInput(challenge, nonce)).digest(), difficultyBits)) nonce++;
+
+    const res = await registerWith({ challenge, nonce });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatchObject({ code: "PROOF_OF_WORK_FAILED", message: expect.stringContaining("Reload the page") });
+    expect(await accountCount()).toBe(0);
+  });
+
+  it("lets one solved puzzle create only one account", async () => {
+    const proof = solveChallenge(createChallenge(ctx.config));
+    const first = await post("/api/auth/register", { ...(await registerBody(ctx.app, "ada@example.com")), proofOfWork: proof });
+    const second = await post("/api/auth/register", { ...(await registerBody(ctx.app, "bob@example.com")), proofOfWork: proof });
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(403);
+    expect(await accountCount()).toBe(1);
+  });
+
+  it("refuses a puzzle that has expired, and says to try again", async () => {
+    const elevenMinutesAgo = Date.now() - 11 * 60 * 1000;
+    const res = await registerWith(solveChallenge(createChallenge(ctx.config, elevenMinutesAgo)));
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.message).toBe("The sign-up check took too long. Create the account again.");
+  });
+
+  // In both cases only the signature gives the edit away: the rest of the puzzle checks out.
+  it("refuses a puzzle someone edited to make it easier", async () => {
+    const { challenge } = createChallenge({ ...ctx.config, PROOF_OF_WORK_BITS: 20 });
+    const [expiresAt, , id, signature] = challenge.split(".");
+    const easier = solveChallenge({ challenge: `${expiresAt}.1.${id}.${signature}`, difficultyBits: 1 });
+    expect((await registerWith(easier)).statusCode).toBe(403);
+  });
+
+  it("refuses a puzzle someone edited to last longer", async () => {
+    const elevenMinutesAgo = Date.now() - 11 * 60 * 1000;
+    const { challenge } = createChallenge(ctx.config, elevenMinutesAgo);
+    const [expiresAt, bits, id, signature] = challenge.split(".");
+    const later = solveChallenge({ challenge: `${Number(expiresAt) + 3_600_000}.${bits}.${id}.${signature}`, difficultyBits: 1 });
+    expect((await registerWith(later)).statusCode).toBe(403);
+    expect((await registerWith(later)).json().error.message).toContain("Reload the page");
+  });
+
+  it("refuses older, easier puzzles once the difficulty is raised", async () => {
+    const easy = solveChallenge(createChallenge(ctx.config));
+    ctx = await createTestApp({ PROOF_OF_WORK_BITS: "4" });
+    expect((await registerWith(easy)).statusCode).toBe(403);
+  });
+});
+
 describe("request safety", () => {
   it("rejects writes without the web app's Origin", async () => {
-    const missing = await post("/api/auth/register", registerBody(), {});
-    const wrong = await post("/api/auth/register", registerBody(), { origin: "https://evil.example" });
+    const missing = await post("/api/auth/register", await registerBody(ctx.app), {});
+    const wrong = await post("/api/auth/register", await registerBody(ctx.app), { origin: "https://evil.example" });
     expect(missing.statusCode).toBe(403);
     expect(wrong.statusCode).toBe(403);
     expect(wrong.json().error.code).toBe("FORBIDDEN");

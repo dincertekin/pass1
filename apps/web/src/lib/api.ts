@@ -1,6 +1,7 @@
 import {
   accountResponseSchema,
   billingStatusResponseSchema,
+  challengeResponseSchema,
   errorResponseSchema,
   listItemsResponseSchema,
   listSessionsResponseSchema,
@@ -69,6 +70,7 @@ async function request<T>(method: string, path: string, schema: z.ZodType<T> | n
 }
 
 export const api = {
+  challenge: () => request("GET", "/auth/challenge", challengeResponseSchema),
   prelogin: (email: string) => request("POST", "/auth/prelogin", preloginResponseSchema, { email }),
   register: (body: RegisterRequest) => request("POST", "/auth/register", accountResponseSchema, body),
   login: (email: string, authKey: string) => request("POST", "/auth/login", accountResponseSchema, { email, authKey }),

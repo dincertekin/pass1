@@ -9,6 +9,8 @@ const ONE_MINUTE = 60 * 1000;
 
 const STRICT = {
   prelogin: { max: 30, timeWindow: ONE_MINUTE },
+  // Handing out a sign-up puzzle is cheap, but there's no reason for anyone to need many.
+  challenge: { max: 30, timeWindow: ONE_MINUTE },
   // Each guess also costs the attacker a full Argon2id run in the browser.
   login: { max: 10, timeWindow: ONE_MINUTE },
   register: { max: 5, timeWindow: 60 * ONE_MINUTE },
