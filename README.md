@@ -150,7 +150,9 @@ The app itself is built: vault, crypto, import and export, sessions, a strict CS
 
 ## Contributing
 
-Issues and pull requests are welcome. Start with [Getting started](#getting-started); `npm test` runs everything. Please report security issues privately, as described in [SECURITY.md](SECURITY.md), not in a public issue.
+Issues and pull requests are welcome. Start with [Getting started](#getting-started); `npm test` runs everything.
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `type(scope): what changed, in plain words`, for example `feat(vault): sync only what changed` or `fix(api): refuse an expired session`. Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`. Scopes are the package or app: `crypto`, `shared`, `api`, `web`, `e2e`, `deploy`, or an area such as `vault` or `billing`. Mark security fixes with `fix(security):` once they're public. Please report security issues privately, as described in [SECURITY.md](SECURITY.md), not in a public issue.
 
 ## Would you like to support pass1?
 
