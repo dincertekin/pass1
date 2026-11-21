@@ -80,6 +80,36 @@ test("trash, restore and delete forever", async ({ page }) => {
   await expect(page.getByText("Trash is empty.")).toBeVisible();
 });
 
+test("changes made on another device show up when you come back to the tab", async ({ page, context }) => {
+  await registerNewAccount(page);
+  await addItem(page, { name: "Netflix", password: "nf-secret-222" });
+  await addItem(page, { name: "Old forum", password: "x" });
+
+  // A second tab stands in for another device.
+  const other = await context.newPage();
+  await other.goto("/");
+  await unlock(other);
+  await addItem(other, { name: "Spotify", password: "sp-secret-444" });
+  await other.getByRole("option", { name: /Netflix/ }).click();
+  await other.getByRole("button", { name: "Edit" }).click();
+  await other.getByLabel("Notes").fill("Edited on the other device");
+  await other.getByRole("button", { name: "Save" }).click();
+  await expect(other.getByText("Edited on the other device")).toBeVisible();
+  await other.getByRole("option", { name: /Old forum/ }).click();
+  await other.getByRole("button", { name: "Move to Trash" }).click();
+  await other.getByRole("button", { name: /^Trash/ }).click();
+  await other.getByRole("option", { name: /Old forum/ }).click();
+  await other.getByRole("button", { name: "Delete forever" }).click();
+  await other.getByRole("alertdialog").getByRole("button", { name: "Delete forever" }).click();
+  await expect(other.getByText("Trash is empty.")).toBeVisible();
+
+  // Headless tabs don't take focus by themselves, so send the event switching back would.
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByRole("option")).toHaveText([/Netflix/, /Spotify/]);
+  await page.getByRole("option", { name: /Netflix/ }).click();
+  await expect(page.getByText("Edited on the other device")).toBeVisible();
+});
+
 test("a javascript: website is shown as text, never as a link", async ({ page }) => {
   await registerNewAccount(page);
   await addItem(page, { name: "Trap", password: "x", url: "javascript:alert(1)" });

@@ -30,8 +30,37 @@ export const vaultItemResponseSchema = z.object({
 });
 export type VaultItemResponse = z.infer<typeof vaultItemResponseSchema>;
 
+/**
+ * Most items in one page of GET /vault/items. Items are at most 64 KiB and usually under 1 KiB,
+ * so a page stays small enough for a phone on a slow network.
+ */
+export const SYNC_PAGE_SIZE = 500;
+
+/**
+ * GET /vault/items?since=N asks for every change after vault version N.
+ * Leaving it out (or 0) asks for the whole vault.
+ */
+export const listItemsQuerySchema = z.object({
+  // Capped at the largest Postgres integer, which is what versions are stored as.
+  since: z.coerce.number().int().min(0).max(2_147_483_647).default(0),
+});
+export type ListItemsQuery = z.infer<typeof listItemsQuerySchema>;
+
 export const listItemsResponseSchema = z.object({
+  /** Items created or changed after `since`, the trash included. */
   items: z.array(vaultItemResponseSchema),
+  /** Items deleted forever after `since`. Remove them from the local copy. */
+  deletedIds: z.array(z.uuid()),
+  /** The vault version this response brings you up to. Send it as `since` next time. */
+  version: z.int().min(0),
+  /** More changes are waiting: ask again right away with `since` = `version`. */
+  hasMore: z.boolean(),
+  /**
+   * This response starts from an empty vault: throw away the local copy before applying it.
+   * True for a full sync, and also when `since` is ahead of the server, which happens after
+   * the server is restored from a backup. Without this, that device would miss every change.
+   */
+  replacesAll: z.boolean(),
 });
 export type ListItemsResponse = z.infer<typeof listItemsResponseSchema>;
 

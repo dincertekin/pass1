@@ -15,6 +15,13 @@
       "when": 1792401191795,
       "tag": "0001_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795300899178,
+      "tag": "0002_vault_sync",
+      "breakpoints": true
     }
   ]
 }

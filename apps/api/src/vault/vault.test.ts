@@ -1,10 +1,9 @@
 import { createVaultKey, deriveKeys, encryptItem, generateSalt } from "@pass1/crypto";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+import { SYNC_PAGE_SIZE } from "@pass1/shared";
 import { users, vaultItems } from "../db/schema.js";
-import { b64, createTestApp, loggedInAs } from "../test-helpers.js";
-
-const blob = (bytes = 272) => ({ v: 1 as const, iv: b64(12), ciphertext: b64(bytes) });
+import { createTestApp, fetchWholeVault, insertItemsDirectly, loggedInAs, testBlob as blob } from "../test-helpers.js";
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 let ada: Awaited<ReturnType<typeof loggedInAs>>;
@@ -20,18 +19,15 @@ async function createItem(as = ada, id: string = crypto.randomUUID()) {
   return res.json();
 }
 
-/** Inserts items straight into the database, for limit tests that need hundreds of them. */
 async function fillVault(userId: string, count: number, size = 272) {
-  const now = new Date();
-  const rows = Array.from({ length: count }, () => ({
-    id: crypto.randomUUID(),
-    userId,
-    data: blob(),
-    size,
-    createdAt: now,
-    updatedAt: now,
-  }));
-  await ctx.db.insert(vaultItems).values(rows);
+  await insertItemsDirectly(ctx.db, userId, count, size);
+}
+
+/** One sync request. Input: the version from the last sync (0 for everything). */
+async function sync(since = 0, as = ada) {
+  const res = await as.send("GET", `/api/vault/items?since=${since}`);
+  expect(res.statusCode).toBe(200);
+  return res.json();
 }
 
 describe("vault items", () => {
@@ -93,12 +89,100 @@ describe("vault items", () => {
   });
 });
 
+describe("Syncing between devices", () => {
+  it("a first sync gets the whole vault and the version it reached", async () => {
+    await createItem();
+    await createItem();
+    const first = await sync();
+    expect(first).toMatchObject({ version: 2, hasMore: false, replacesAll: true, deletedIds: [] });
+    expect(first.items).toHaveLength(2);
+  });
+
+  it("a later sync gets only what changed since", async () => {
+    const unchanged = await createItem();
+    const edited = await createItem();
+    const { version } = await sync();
+
+    await ada.send("PUT", `/api/vault/items/${edited.id}`, { data: blob(), revision: 1 });
+    const added = await createItem();
+    const later = await sync(version);
+
+    expect(later.replacesAll).toBe(false);
+    expect(later.items.map((item: { id: string }) => item.id).sort()).toEqual([edited.id, added.id].sort());
+    expect(later.items.map((item: { id: string }) => item.id)).not.toContain(unchanged.id);
+    expect(later.version).toBe(version + 2);
+  });
+
+  it("nothing changed means nothing is sent, and the version stays put", async () => {
+    await createItem();
+    const { version } = await sync();
+    expect(await sync(version)).toMatchObject({ items: [], deletedIds: [], version, hasMore: false });
+  });
+
+  it("moving to the trash and back reaches other devices", async () => {
+    const item = await createItem();
+    const { version } = await sync();
+    await ada.send("POST", `/api/vault/items/${item.id}/trash`);
+    const afterTrash = await sync(version);
+    expect(afterTrash.items).toMatchObject([{ id: item.id, deletedAt: expect.any(Number) }]);
+
+    await ada.send("POST", `/api/vault/items/${item.id}/restore`);
+    expect((await sync(afterTrash.version)).items).toMatchObject([{ id: item.id, deletedAt: null }]);
+  });
+
+  it("an item deleted forever is reported so other devices remove it", async () => {
+    const item = await createItem();
+    const { version } = await sync();
+    await ada.send("DELETE", `/api/vault/items/${item.id}`);
+    expect(await sync(version)).toMatchObject({ items: [], deletedIds: [item.id] });
+  });
+
+  it("an ID that comes back after being deleted forever is an item again, not a deletion", async () => {
+    const item = await createItem();
+    const { version } = await sync();
+    await ada.send("DELETE", `/api/vault/items/${item.id}`);
+    await createItem(ada, item.id);
+    expect(await sync(version)).toMatchObject({ items: [{ id: item.id }], deletedIds: [] });
+  });
+
+  it("a large vault arrives in pages, with nothing missed or repeated", async () => {
+    await fillVault(ada.userId, SYNC_PAGE_SIZE * 2 + 1);
+    const firstPage = await sync();
+    expect(firstPage).toMatchObject({ hasMore: true, version: SYNC_PAGE_SIZE });
+    expect(firstPage.items).toHaveLength(SYNC_PAGE_SIZE);
+
+    const items = await fetchWholeVault(ada.send);
+    expect(new Set(items.map((item: { id: string }) => item.id)).size).toBe(SYNC_PAGE_SIZE * 2 + 1);
+  });
+
+  it("after the server is restored from an older backup, a device gets a fresh full copy", async () => {
+    await createItem();
+    // The device last synced at version 900, but the restored server is only at version 1.
+    expect(await sync(900)).toMatchObject({ version: 1, replacesAll: true, items: [expect.any(Object)] });
+  });
+
+  it("a refused change doesn't count as a change", async () => {
+    const item = await createItem();
+    await ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 });
+    const { version } = await sync();
+    const stale = await ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 });
+    expect(stale.statusCode).toBe(409);
+    expect((await sync()).version).toBe(version);
+  });
+
+  it("refuses a version that isn't a whole number", async () => {
+    for (const since of ["-1", "abc", "1.5"]) {
+      expect((await ada.send("GET", `/api/vault/items?since=${since}`)).statusCode).toBe(400);
+    }
+  });
+});
+
 describe("isolation between users", () => {
   it("hides one user's items from another, as if they didn't exist", async () => {
     const item = await createItem(ada);
     const eve = await loggedInAs(ctx.app, "eve@example.com");
 
-    expect((await eve.send("GET", "/api/vault/items")).json().items).toEqual([]);
+    expect((await eve.send("GET", "/api/vault/items")).json()).toMatchObject({ items: [], version: 0 });
     expect((await eve.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 })).statusCode).toBe(404);
     expect((await eve.send("POST", `/api/vault/items/${item.id}/trash`)).statusCode).toBe(404);
     expect((await eve.send("DELETE", `/api/vault/items/${item.id}`)).statusCode).toBe(404);
@@ -162,6 +246,14 @@ describe("simultaneous writes", () => {
       ada.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 }),
     ]);
     expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+  });
+
+  it("gives two simultaneous saves different versions, so a sync sees both", async () => {
+    const { version } = await sync();
+    await Promise.all([createItem(), createItem()]);
+    const later = await sync(version);
+    expect(later.items).toHaveLength(2);
+    expect(later.version).toBe(version + 2);
   });
 });
 

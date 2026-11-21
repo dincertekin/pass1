@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { buildApp, type AppDeps } from "./app.js";
 import { loadConfig } from "./config.js";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { openDatabase, type Database, type Db } from "./db/client.js";
+import { users, vaultItems } from "./db/schema.js";
 
 // One in-memory Postgres (PGlite) per test file, because starting one takes a moment.
 // Every test empties it first, so tests never see each other's data.
@@ -14,7 +15,7 @@ let shared: Database | null = null;
 
 export async function emptyTestDatabase(): Promise<Db> {
   shared ??= await openDatabase(TEST_DATABASE_URL);
-  await shared.db.execute(sql`truncate table users, sessions, vault_items, subscriptions, billing_checkouts, webhook_events cascade`);
+  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, subscriptions, billing_checkouts, webhook_events cascade`);
   return shared.db;
 }
 
@@ -55,4 +56,46 @@ export async function loggedInAs(app: TestApp, email = "ada@example.com") {
   const send = (method: "GET" | "POST" | "PUT" | "DELETE", url: string, payload?: object) =>
     app.inject({ method, url, payload, headers: ORIGIN, cookies: { [SESSION_COOKIE]: token } });
   return { send, userId, token, authKey: body.authKey };
+}
+
+/** A random encrypted blob of the right shape. Input: ciphertext bytes. */
+export const testBlob = (bytes = 272) => ({ v: 1 as const, iv: b64(12), ciphertext: b64(bytes) });
+
+/**
+ * Inserts items straight into the database, for tests that need hundreds of them.
+ * Input: the owner, how many, and the size each counts against the plan.
+ * Gives each item the next vault version, like a real write, so sync sees them.
+ */
+export async function insertItemsDirectly(db: Db, userId: string, count: number, size = 272) {
+  const [user] = await db
+    .update(users)
+    .set({ vaultVersion: sql`${users.vaultVersion} + ${count}` })
+    .where(eq(users.id, userId))
+    .returning({ vaultVersion: users.vaultVersion });
+  const firstVersion = user!.vaultVersion - count + 1;
+  const now = new Date();
+  const rows = Array.from({ length: count }, (_, index) => ({
+    id: crypto.randomUUID(),
+    userId,
+    data: testBlob(),
+    size,
+    changeVersion: firstVersion + index,
+    createdAt: now,
+    updatedAt: now,
+  }));
+  await db.insert(vaultItems).values(rows);
+}
+
+type Send = Awaited<ReturnType<typeof loggedInAs>>["send"];
+
+/** Follows sync pages until the end. Output: every item in the vault, the trash included. */
+export async function fetchWholeVault(send: Send) {
+  const items = [];
+  let since = 0;
+  for (;;) {
+    const page = (await send("GET", `/api/vault/items?since=${since}`)).json();
+    items.push(...page.items);
+    since = page.version;
+    if (!page.hasMore) return items;
+  }
 }

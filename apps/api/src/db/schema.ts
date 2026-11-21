@@ -1,5 +1,5 @@
 import { PLAN_IDS, type EncryptedBlob } from "@pass1/shared";
-import { index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 // The whole database schema (Postgres). After changing it, run `npm run db:generate -w @pass1/api`
 // to create a migration, and commit the new file in drizzle/.
@@ -31,6 +31,9 @@ export const users = pgTable("users", {
   wrappedVaultKey: jsonb("wrapped_vault_key").$type<EncryptedBlob>().notNull(),
 
   plan: text("plan", { enum: PLAN_IDS }).notNull().default("free"),
+  // Goes up by one on every change to this user's vault, so devices can ask for "everything
+  // since version N" (see vault/sync.ts). 0 means the vault has never changed.
+  vaultVersion: integer("vault_version").notNull().default(0),
   createdAt: createdAt(),
 });
 
@@ -67,12 +70,38 @@ export const vaultItems = pgTable(
     size: integer("size").notNull(),
     // Goes up by one on every change. Edits must name the revision they're based on.
     revision: integer("revision").notNull().default(1),
+    // The user's vaultVersion at this item's latest change. Unique per user, so sync pages
+    // never split one version in two. No default: every write must take a new version.
+    changeVersion: integer("change_version").notNull(),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     // Set when the item is in the trash. The server knows an item is trashed, nothing more.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
-  (table) => [index("vault_items_user_id_idx").on(table.userId)],
+  (table) => [
+    index("vault_items_user_id_idx").on(table.userId),
+    uniqueIndex("vault_items_user_change_version_idx").on(table.userId, table.changeVersion),
+  ],
+);
+
+/**
+ * Items deleted forever, so other devices learn to remove them on their next sync.
+ * Holds only the random item ID and when (in vault versions) it was deleted.
+ */
+// TODO: delete rows older than a few months once clients can be told to do a full resync instead.
+export const vaultDeletions = pgTable(
+  "vault_deletions",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    itemId: text("item_id").notNull(),
+    changeVersion: integer("change_version").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.itemId] }),
+    index("vault_deletions_user_change_version_idx").on(table.userId, table.changeVersion),
+  ],
 );
 
 /**

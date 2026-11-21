@@ -57,6 +57,7 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
       kdfParallelism: body.kdfParams.parallelism,
       wrappedVaultKey: body.wrappedVaultKey,
       plan: "free",
+      vaultVersion: 0,
       createdAt: new Date(),
     };
 

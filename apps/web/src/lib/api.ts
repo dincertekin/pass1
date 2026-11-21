@@ -75,7 +75,8 @@ export const api = {
   logout: () => request("POST", "/auth/logout", null),
   me: () => request("GET", "/auth/me", accountResponseSchema),
 
-  listItems: () => request("GET", "/vault/items", listItemsResponseSchema),
+  /** One page of changes after vault version `since` (0 for everything). See vault/sync.ts. */
+  listItems: (since: number) => request("GET", `/vault/items?since=${since}`, listItemsResponseSchema),
   createItem: (body: CreateItemRequest) => request("POST", "/vault/items", vaultItemResponseSchema, body),
   updateItem: (id: string, body: UpdateItemRequest) => request("PUT", `/vault/items/${id}`, vaultItemResponseSchema, body),
   trashItem: (id: string) => request("POST", `/vault/items/${id}/trash`, vaultItemResponseSchema),

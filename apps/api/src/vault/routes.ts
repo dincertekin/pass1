@@ -1,5 +1,6 @@
 import {
   createItemRequestSchema,
+  listItemsQuerySchema,
   PLANS,
   storedSize,
   updateItemRequestSchema,
@@ -12,19 +13,22 @@ import { z } from "zod";
 import type { AppDeps } from "../app.js";
 import { requireUser } from "../auth/sessions.js";
 import type { Db } from "../db/client.js";
-import { users, vaultItems, type User, type VaultItemRow } from "../db/schema.js";
+import { vaultDeletions, vaultItems, type User, type VaultItemRow } from "../db/schema.js";
 import { ApiError, parseBody } from "../errors.js";
+import { listChanges, takeNextVaultVersion, toItemResponse } from "./sync.js";
 
 // CRUD for encrypted vault items. Every query is filtered by the logged-in user's ID,
 // so one user can never read or change another user's items, even by guessing an ID.
+// Every write takes a new vault version first (see sync.ts), so other devices can fetch
+// only what changed.
 
 const idParamsSchema = z.object({ id: z.uuid() });
 
 export function vaultRoutes(app: FastifyInstance, { db, config }: AppDeps) {
   app.get("/vault/items", async (request): Promise<ListItemsResponse> => {
     const user = await requireUser(db, config, request);
-    const rows = await db.select().from(vaultItems).where(eq(vaultItems.userId, user.id));
-    return { items: rows.map(toItemResponse) };
+    const { since } = parseBody(listItemsQuerySchema, request.query);
+    return listChanges(db, user, since);
   });
 
   app.post("/vault/items", async (request, reply) => {
@@ -33,15 +37,17 @@ export function vaultRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     const size = storedSize(body.data);
 
     const row = await db.transaction(async (tx) => {
-      await lockUser(tx, user);
+      const version = await takeNextVaultVersion(tx, user);
       const [taken] = await tx.select({ id: vaultItems.id }).from(vaultItems).where(eq(vaultItems.id, body.id));
       if (taken) throw new ApiError(409, "CONFLICT", "An item with this ID already exists.");
       await assertWithinLimits(tx, user, { addItems: 1, addBytes: size });
 
+      // An ID that was deleted forever and comes back is a new item, not a deleted one.
+      await tx.delete(vaultDeletions).where(and(eq(vaultDeletions.userId, user.id), eq(vaultDeletions.itemId, body.id)));
       const now = new Date();
       const [inserted] = await tx
         .insert(vaultItems)
-        .values({ id: body.id, userId: user.id, data: body.data, size, createdAt: now, updatedAt: now })
+        .values({ id: body.id, userId: user.id, data: body.data, size, changeVersion: version, createdAt: now, updatedAt: now })
         .returning();
       return inserted!;
     });
@@ -56,7 +62,7 @@ export function vaultRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     const size = storedSize(body.data);
 
     const row = await db.transaction(async (tx) => {
-      await lockUser(tx, user);
+      const version = await takeNextVaultVersion(tx, user);
       const existing = await findItem(tx, user, id);
       if (existing.revision !== body.revision) {
         throw new ApiError(409, "CONFLICT", "This item was changed somewhere else. Reload to see the latest version.");
@@ -66,7 +72,7 @@ export function vaultRoutes(app: FastifyInstance, { db, config }: AppDeps) {
 
       const [updated] = await tx
         .update(vaultItems)
-        .set({ data: body.data, size, revision: existing.revision + 1, updatedAt: new Date() })
+        .set({ data: body.data, size, revision: existing.revision + 1, changeVersion: version, updatedAt: new Date() })
         .where(eq(vaultItems.id, id))
         .returning();
       return updated!;
@@ -87,11 +93,16 @@ export function vaultRoutes(app: FastifyInstance, { db, config }: AppDeps) {
   app.delete("/vault/items/:id", async (request, reply) => {
     const user = await requireUser(db, config, request);
     const { id } = parseBody(idParamsSchema, request.params);
-    const deleted = await db
-      .delete(vaultItems)
-      .where(and(eq(vaultItems.id, id), eq(vaultItems.userId, user.id)))
-      .returning({ id: vaultItems.id });
-    if (deleted.length === 0) throw new ApiError(404, "NOT_FOUND", "Item not found.");
+    await db.transaction(async (tx) => {
+      const version = await takeNextVaultVersion(tx, user);
+      const deleted = await tx
+        .delete(vaultItems)
+        .where(and(eq(vaultItems.id, id), eq(vaultItems.userId, user.id)))
+        .returning({ id: vaultItems.id });
+      if (deleted.length === 0) throw new ApiError(404, "NOT_FOUND", "Item not found.");
+      // Remembered so other devices remove it too on their next sync.
+      await tx.insert(vaultDeletions).values({ userId: user.id, itemId: id, changeVersion: version });
+    });
     return reply.status(204).send();
   });
 
@@ -99,28 +110,22 @@ export function vaultRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     const user = await requireUser(db, config, request);
     const { id } = parseBody(idParamsSchema, request.params);
     const now = new Date();
-    // One statement, so the revision bump can't race with another change.
-    const [row] = await db
-      .update(vaultItems)
-      .set({ deletedAt: trashed ? now : null, revision: sql`${vaultItems.revision} + 1`, updatedAt: now })
-      .where(and(eq(vaultItems.id, id), eq(vaultItems.userId, user.id)))
-      .returning();
-    if (!row) throw new ApiError(404, "NOT_FOUND", "Item not found.");
+    const row = await db.transaction(async (tx) => {
+      const version = await takeNextVaultVersion(tx, user);
+      const [updated] = await tx
+        .update(vaultItems)
+        .set({ deletedAt: trashed ? now : null, revision: sql`${vaultItems.revision} + 1`, changeVersion: version, updatedAt: now })
+        .where(and(eq(vaultItems.id, id), eq(vaultItems.userId, user.id)))
+        .returning();
+      if (!updated) throw new ApiError(404, "NOT_FOUND", "Item not found.");
+      return updated;
+    });
     return toItemResponse(row);
   }
 }
 
 // The database itself, or a transaction: both have the same query methods.
 type Queryable = Pick<Db, "select">;
-
-/**
- * Makes this user's writes happen one at a time. Postgres runs transactions side by side,
- * so without this, two saves at the same moment could both pass the plan-limit check, or
- * both pass the revision check and silently overwrite each other. Other users aren't affected.
- */
-async function lockUser(tx: Queryable, user: User) {
-  await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for("update");
-}
 
 /** Finds one of the user's items, or throws 404. Another user's item also gives 404. */
 async function findItem(tx: Queryable, user: User, id: string): Promise<VaultItemRow> {
@@ -151,15 +156,4 @@ async function assertWithinLimits(tx: Queryable, user: User, change: { addItems:
     const mb = Math.round(limits.maxStorageBytes / (1024 * 1024));
     throw new ApiError(403, "PLAN_LIMIT_REACHED", `Your plan holds up to ${mb} MB.`);
   }
-}
-
-function toItemResponse(row: VaultItemRow): VaultItemResponse {
-  return {
-    id: row.id,
-    revision: row.revision,
-    data: row.data,
-    createdAt: row.createdAt.getTime(),
-    updatedAt: row.updatedAt.getTime(),
-    deletedAt: row.deletedAt?.getTime() ?? null,
-  };
 }

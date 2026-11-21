@@ -1,8 +1,8 @@
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { billingCheckouts, users, vaultItems } from "../db/schema.js";
-import { b64, createTestApp, loggedInAs } from "../test-helpers.js";
+import { billingCheckouts, users } from "../db/schema.js";
+import { b64, createTestApp, fetchWholeVault, insertItemsDirectly, loggedInAs } from "../test-helpers.js";
 import type { PaddleClient } from "./paddle.js";
 
 // Billing end to end, except Paddle itself: checkout and portal calls go to a fake, and
@@ -159,19 +159,16 @@ describe("renewal and cancellation", () => {
 
   it("when it ends, the user is back on Free and a vault over the limit becomes read-only", async () => {
     await upgradeToPlus();
-    const now = new Date();
-    await ctx.db.insert(vaultItems).values(
-      Array.from({ length: 600 }, () => ({ id: crypto.randomUUID(), userId: ada.userId, data: { v: 1 as const, iv: b64(12), ciphertext: b64(272) }, size: 272, createdAt: now, updatedAt: now })),
-    );
+    await insertItemsDirectly(ctx.db, ada.userId, 600);
 
     await deliver(subscriptionEvent("subscription.canceled", { status: "canceled" }));
     expect(await plan()).toBe("free");
 
     // Nothing is deleted; reading, exporting and deleting still work; adding doesn't.
-    const list = await ada.send("GET", "/api/vault/items");
-    expect(list.json().items).toHaveLength(600);
+    const items = await fetchWholeVault(ada.send);
+    expect(items).toHaveLength(600);
     expect((await ada.send("POST", "/api/vault/items", { id: crypto.randomUUID(), data: { v: 1, iv: b64(12), ciphertext: b64(272) } })).statusCode).toBe(403);
-    expect((await ada.send("DELETE", `/api/vault/items/${list.json().items[0].id}`)).statusCode).toBe(204);
+    expect((await ada.send("DELETE", `/api/vault/items/${items[0].id}`)).statusCode).toBe(204);
   });
 });
 
