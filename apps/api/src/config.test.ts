@@ -18,6 +18,11 @@ describe("loadConfig", () => {
     expect(loadConfig(PROD).NODE_ENV).toBe("production");
   });
 
+  it("treats empty settings as unset, the way Docker Compose passes them", () => {
+    const empty = Object.fromEntries(["PADDLE_API_KEY", "PADDLE_WEBHOOK_SECRET", "PADDLE_PRICE_PLUS_YEARLY"].map((key) => [key, ""]));
+    expect(loadConfig({ ...PROD, ...empty }).PADDLE_API_KEY).toBeUndefined();
+  });
+
   it("refuses PGlite in production", () => {
     expect(() => loadConfig({ ...PROD, DATABASE_URL: "pglite:./data/pglite" })).toThrow(/must be a postgres:\/\/ URL in production/);
   });

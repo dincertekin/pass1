@@ -20,7 +20,10 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
       # The checkout page's domain and settings, only needed with billing on (docs/deploy.md).
-      CHECKOUT_DOMAIN: ${CHECKOUT_DOMAIN:-}
+      # The fallback must be here, not only in the Caddyfile: Caddy's {$CHECKOUT_DOMAIN:default}
+      # applies only when the variable is missing, and Compose passes an empty one as "".
+      # An empty site address makes Caddy refuse the whole config and restart forever.
+      CHECKOUT_DOMAIN: ${CHECKOUT_DOMAIN:-checkout.localhost}
       PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL in .env}
       PADDLE_ENVIRONMENT: ${PADDLE_ENVIRONMENT:-sandbox}
       PADDLE_CLIENT_TOKEN: ${PADDLE_CLIENT_TOKEN:-}

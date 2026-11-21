@@ -73,7 +73,10 @@ const envSchema = z
 export type Config = z.infer<typeof envSchema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const result = envSchema.safeParse(env);
+  // Docker Compose passes a setting left empty in .env as "" (compose.yaml uses ${NAME:-}).
+  // Empty means "not set" here; otherwise the documented billing-off setup refuses to start.
+  const setValues = Object.fromEntries(Object.entries(env).filter(([, value]) => value !== ""));
+  const result = envSchema.safeParse(setValues);
   if (!result.success) {
     const problems = result.error.issues.map((issue) => `  ${issue.path.join(".")}: ${issue.message}`);
     throw new Error(`Invalid configuration:\n${problems.join("\n")}`);
