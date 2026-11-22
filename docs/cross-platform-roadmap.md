@@ -44,9 +44,9 @@ Before building on it, prove the web app is ready.
 
 Mobile apps can't use code that touches `window`, `document` or `crypto.subtle` directly. Pull the logic out of `apps/web` so every app uses the same tested code.
 
-- [ ] **A crypto provider interface** in `packages/crypto`: Argon2id, HKDF-SHA256, AES-256-GCM and secure random, behind one small interface. The web keeps Web Crypto and `hash-wasm`. Mobile gets native implementations (Phase 4).
+- [x] **A crypto provider interface** in `packages/crypto`: Argon2id, HKDF-SHA256, AES-256-GCM and secure random, behind one small interface. The web keeps Web Crypto and `hash-wasm`. Mobile gets native implementations (Phase 4).
   - Trap: React Native's JavaScript engine (Hermes) has no `crypto.subtle` and can't run WebAssembly like a browser, so `hash-wasm` won't run there as it is.
-- [ ] **A conformance test suite** that runs the pinned test vector, and a few hundred random round trips, against *any* provider. Every platform must pass it before it touches a real vault. This is the most important test in the whole plan: a provider that encrypts slightly differently breaks vaults across devices.
+- [x] **A conformance test suite** that runs the pinned test vector, and a few hundred random round trips, against *any* provider. Every platform must pass it before it touches a real vault. This is the most important test in the whole plan: a provider that encrypts slightly differently breaks vaults across devices.
 - [ ] **`packages/core`** for logic with no browser in it: vault entries and search, password health, importers (Chrome, Bitwarden, 1Password...), the generator, plan limits, the API client.
 - [ ] The web app uses the new packages, and its tests still pass unchanged.
 - [ ] **Translations.** Every UI string is hard-coded English today. Move them into one message file per language, shared by web, desktop and mobile, before there are three apps to change. Dates and numbers through `Intl`, so no library is needed.

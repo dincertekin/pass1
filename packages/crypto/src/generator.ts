@@ -87,6 +87,8 @@ export function randomInt(max: number): number {
   const limit = 2 ** 32 - (2 ** 32 % max);
   const buffer = new Uint32Array(1);
   for (;;) {
+    // TODO: take random bytes from a CryptoProvider (provider.ts) like the rest of the package,
+    // when the phone app needs the generator. React Native has no crypto.getRandomValues by default.
     crypto.getRandomValues(buffer);
     if (buffer[0]! < limit) return buffer[0]! % max;
   }

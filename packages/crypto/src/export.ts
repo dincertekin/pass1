@@ -1,4 +1,5 @@
 import { utf8 } from "./encoding";
+import type { CryptoProvider } from "./provider";
 import { DEFAULT_KDF_PARAMS, deriveExportKey, generateSalt, type KdfParams } from "./kdf";
 import { decryptBytes, encryptBytes, pad, unpad, type EncryptedBlob, type VaultItem } from "./vault";
 
@@ -22,10 +23,10 @@ export interface ExportFile {
   data: EncryptedBlob;
 }
 
-export async function createExport(items: VaultItem[], password: string): Promise<ExportFile> {
-  const kdfSalt = generateSalt();
-  const key = await deriveExportKey(password, kdfSalt, DEFAULT_KDF_PARAMS);
-  const data = await encryptBytes(key, pad(utf8.encode(JSON.stringify(items))), EXPORT_AAD);
+export async function createExport<Key>(provider: CryptoProvider<Key>, items: VaultItem[], password: string): Promise<ExportFile> {
+  const kdfSalt = generateSalt(provider);
+  const key = await deriveExportKey(provider, password, kdfSalt, DEFAULT_KDF_PARAMS);
+  const data = await encryptBytes(provider, key, pad(utf8.encode(JSON.stringify(items))), EXPORT_AAD);
   return { format: EXPORT_FORMAT, version: 1, exportedAt: new Date().toISOString(), kdfSalt, kdfParams: DEFAULT_KDF_PARAMS, data };
 }
 
@@ -33,8 +34,8 @@ export async function createExport(items: VaultItem[], password: string): Promis
  * Throws DecryptionError for a wrong password or a modified file. Check the file's shape
  * (including KDF bounds) before calling this; @pass1/shared has exportFileSchema for that.
  */
-export async function openExport(file: ExportFile, password: string): Promise<VaultItem[]> {
-  const key = await deriveExportKey(password, file.kdfSalt, file.kdfParams);
-  const plaintext = unpad(await decryptBytes(key, file.data, EXPORT_AAD));
+export async function openExport<Key>(provider: CryptoProvider<Key>, file: ExportFile, password: string): Promise<VaultItem[]> {
+  const key = await deriveExportKey(provider, password, file.kdfSalt, file.kdfParams);
+  const plaintext = unpad(await decryptBytes(provider, key, file.data, EXPORT_AAD));
   return JSON.parse(utf8.decode(plaintext)) as VaultItem[];
 }

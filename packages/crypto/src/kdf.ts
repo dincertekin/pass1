@@ -1,5 +1,5 @@
-import { argon2id } from "hash-wasm";
-import { fromBase64, randomBytes, toBase64, utf8 } from "./encoding";
+import { fromBase64, toBase64, utf8 } from "./encoding";
+import type { CryptoProvider } from "./provider";
 
 /**
  * Argon2id cost parameters. Stored per user on the server so they can be
@@ -20,9 +20,9 @@ export const DEFAULT_KDF_PARAMS: KdfParams = {
 
 export const SALT_LENGTH = 16;
 
-export interface DerivedKeys {
+export interface DerivedKeys<Key = CryptoKey> {
   /** Wraps/unwraps the vault key. Never leaves the browser. */
-  encryptionKey: CryptoKey;
+  encryptionKey: Key;
   /** Sent to the server in place of the password; the server hashes it again. */
   authKey: string;
 }
@@ -31,9 +31,11 @@ export interface DerivedKeys {
 const ENCRYPTION_INFO = "pass1/v1/encryption";
 const AUTH_INFO = "pass1/v1/auth";
 const EXPORT_INFO = "pass1/v1/export";
+const AUTH_KEY_BYTES = 32;
 
-export function generateSalt(): string {
-  return toBase64(randomBytes(SALT_LENGTH));
+/** Input: a provider. Output: a new random salt, base64, e.g. "AAECAwQFBgcICQoLDA0ODw==". */
+export function generateSalt<Key>(provider: CryptoProvider<Key>): string {
+  return toBase64(provider.randomBytes(SALT_LENGTH));
 }
 
 /**
@@ -42,24 +44,20 @@ export function generateSalt(): string {
  * Splitting with HKDF means the value the server sees (auth key) cannot be
  * used to recover the key that decrypts the vault.
  */
-export async function deriveKeys(
+export async function deriveKeys<Key>(
+  provider: CryptoProvider<Key>,
   masterPassword: string,
   saltB64: string,
   params: KdfParams = DEFAULT_KDF_PARAMS,
-): Promise<DerivedKeys> {
-  const hkdfKey = await stretchPassword(masterPassword, saltB64, params);
-
-  const encryptionKey = await crypto.subtle.deriveKey(
-    hkdfParams(ENCRYPTION_INFO),
-    hkdfKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
-
-  const authBits = await crypto.subtle.deriveBits(hkdfParams(AUTH_INFO), hkdfKey, 256);
-
-  return { encryptionKey, authKey: toBase64(new Uint8Array(authBits)) };
+): Promise<DerivedKeys<Key>> {
+  const masterKey = await stretchPassword(provider, masterPassword, saltB64, params);
+  try {
+    const encryptionKey = await provider.hkdfAesKey(masterKey, ENCRYPTION_INFO);
+    const authKey = toBase64(await provider.hkdfBytes(masterKey, AUTH_INFO, AUTH_KEY_BYTES));
+    return { encryptionKey, authKey };
+  } finally {
+    masterKey.fill(0);
+  }
 }
 
 /**
@@ -67,29 +65,20 @@ export async function deriveKeys(
  * A different HKDF label from deriveKeys(), so even when the export password equals the
  * master password, the export key and the vault's encryption key are unrelated.
  */
-export async function deriveExportKey(password: string, saltB64: string, params: KdfParams): Promise<CryptoKey> {
-  const hkdfKey = await stretchPassword(password, saltB64, params);
-  return crypto.subtle.deriveKey(hkdfParams(EXPORT_INFO), hkdfKey, { name: "AES-GCM", length: 256 }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
+export async function deriveExportKey<Key>(provider: CryptoProvider<Key>, password: string, saltB64: string, params: KdfParams): Promise<Key> {
+  const masterKey = await stretchPassword(provider, password, saltB64, params);
+  try {
+    return await provider.hkdfAesKey(masterKey, EXPORT_INFO);
+  } finally {
+    masterKey.fill(0);
+  }
 }
 
-/** password --Argon2id--> 32 bytes, imported as an HKDF key so it can't be read back. */
-async function stretchPassword(password: string, saltB64: string, params: KdfParams): Promise<CryptoKey> {
-  const masterKey = await argon2id({
-    password: password.normalize("NFKC"),
-    salt: fromBase64(saltB64),
-    memorySize: params.memoryKiB,
-    iterations: params.iterations,
-    parallelism: params.parallelism,
-    hashLength: 32,
-    outputType: "binary",
-  });
-
-  return crypto.subtle.importKey("raw", new Uint8Array(masterKey), "HKDF", false, ["deriveKey", "deriveBits"]);
-}
-
-function hkdfParams(info: string) {
-  return { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: utf8.encode(info) };
+/**
+ * password --Argon2id--> 32 bytes. The caller zeroes them once the HKDF keys are derived.
+ * NFKC first, so the same password typed on a Mac and on Windows (which can compose accented
+ * letters differently) gives the same key.
+ */
+function stretchPassword<Key>(provider: CryptoProvider<Key>, password: string, saltB64: string, params: KdfParams) {
+  return provider.argon2id(utf8.encode(password.normalize("NFKC")), fromBase64(saltB64), params);
 }

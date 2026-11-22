@@ -13,10 +13,6 @@ export function fromBase64(value: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
-  return crypto.getRandomValues(new Uint8Array(length));
-}
-
 export const utf8 = {
   encode: (value: string) => new TextEncoder().encode(value),
   decode: (bytes: Uint8Array) => new TextDecoder().decode(bytes),

@@ -1,4 +1,5 @@
-import { fromBase64, randomBytes, toBase64, utf8 } from "./encoding";
+import { fromBase64, toBase64, utf8 } from "./encoding";
+import type { CryptoProvider } from "./provider";
 
 /**
  * Version of the stored format. Bump it only together with code that can still read
@@ -57,8 +58,8 @@ export class UnsupportedFormatError extends Error {
  * Item IDs are created in the browser, before encryption, because the ID is bound into the
  * ciphertext. The server only checks that it's a UUID and that it isn't taken.
  */
-export function newItemId(): string {
-  return crypto.randomUUID();
+export function newItemId<Key>(provider: CryptoProvider<Key>): string {
+  return provider.randomUUID();
 }
 
 /**
@@ -68,24 +69,26 @@ export function newItemId(): string {
  * Items are encrypted with the vault key, not the password-derived key, so changing
  * the master password only requires re-wrapping this one key.
  */
-export async function createVaultKey(
-  encryptionKey: CryptoKey,
-): Promise<{ vaultKey: CryptoKey; wrappedVaultKey: EncryptedBlob }> {
-  const raw = randomBytes(VAULT_KEY_LENGTH);
-  const wrappedVaultKey = await encryptBytes(encryptionKey, raw, VAULT_KEY_AAD);
-  const vaultKey = await importVaultKey(raw);
-  raw.fill(0);
-  return { vaultKey, wrappedVaultKey };
+export async function createVaultKey<Key>(
+  provider: CryptoProvider<Key>,
+  encryptionKey: Key,
+): Promise<{ vaultKey: Key; wrappedVaultKey: EncryptedBlob }> {
+  const raw = provider.randomBytes(VAULT_KEY_LENGTH);
+  try {
+    const wrappedVaultKey = await encryptBytes(provider, encryptionKey, raw, VAULT_KEY_AAD);
+    return { vaultKey: await provider.importAesKey(raw), wrappedVaultKey };
+  } finally {
+    raw.fill(0);
+  }
 }
 
-export async function unwrapVaultKey(
-  encryptionKey: CryptoKey,
-  wrappedVaultKey: EncryptedBlob,
-): Promise<CryptoKey> {
-  const raw = await decryptBytes(encryptionKey, wrappedVaultKey, VAULT_KEY_AAD);
-  const vaultKey = await importVaultKey(raw);
-  raw.fill(0);
-  return vaultKey;
+export async function unwrapVaultKey<Key>(provider: CryptoProvider<Key>, encryptionKey: Key, wrappedVaultKey: EncryptedBlob): Promise<Key> {
+  const raw = await decryptBytes(provider, encryptionKey, wrappedVaultKey, VAULT_KEY_AAD);
+  try {
+    return await provider.importAesKey(raw);
+  } finally {
+    raw.fill(0);
+  }
 }
 
 /**
@@ -95,25 +98,26 @@ export async function unwrapVaultKey(
  * The vault key is non-extractable, so its raw bytes come from decrypting the stored copy.
  * They exist only inside this function and are zeroed before it returns.
  */
-export async function rewrapVaultKey(
-  oldEncryptionKey: CryptoKey,
+export async function rewrapVaultKey<Key>(
+  provider: CryptoProvider<Key>,
+  oldEncryptionKey: Key,
   wrappedVaultKey: EncryptedBlob,
-  newEncryptionKey: CryptoKey,
+  newEncryptionKey: Key,
 ): Promise<EncryptedBlob> {
-  const raw = await decryptBytes(oldEncryptionKey, wrappedVaultKey, VAULT_KEY_AAD);
+  const raw = await decryptBytes(provider, oldEncryptionKey, wrappedVaultKey, VAULT_KEY_AAD);
   try {
-    return await encryptBytes(newEncryptionKey, raw, VAULT_KEY_AAD);
+    return await encryptBytes(provider, newEncryptionKey, raw, VAULT_KEY_AAD);
   } finally {
     raw.fill(0);
   }
 }
 
-export async function encryptItem(vaultKey: CryptoKey, itemId: string, item: VaultItem): Promise<EncryptedBlob> {
-  return encryptBytes(vaultKey, pad(utf8.encode(JSON.stringify(item))), itemAad(itemId));
+export async function encryptItem<Key>(provider: CryptoProvider<Key>, vaultKey: Key, itemId: string, item: VaultItem): Promise<EncryptedBlob> {
+  return encryptBytes(provider, vaultKey, pad(utf8.encode(JSON.stringify(item))), itemAad(itemId));
 }
 
-export async function decryptItem(vaultKey: CryptoKey, itemId: string, blob: EncryptedBlob): Promise<VaultItem> {
-  const padded = await decryptBytes(vaultKey, blob, itemAad(itemId));
+export async function decryptItem<Key>(provider: CryptoProvider<Key>, vaultKey: Key, itemId: string, blob: EncryptedBlob): Promise<VaultItem> {
+  const padded = await decryptBytes(provider, vaultKey, blob, itemAad(itemId));
   return JSON.parse(utf8.decode(unpad(padded))) as VaultItem;
 }
 
@@ -134,31 +138,18 @@ export function unpad(padded: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> 
   return padded.slice(LENGTH_PREFIX_BYTES, LENGTH_PREFIX_BYTES + length);
 }
 
-// Non-extractable: once imported, the raw key bytes can't be read back out by JS.
-function importVaultKey(raw: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+/** @internal */
+export async function encryptBytes<Key>(provider: CryptoProvider<Key>, key: Key, plaintext: Uint8Array, aad: string): Promise<EncryptedBlob> {
+  const iv = provider.randomBytes(IV_LENGTH);
+  const ciphertext = await provider.aesGcmEncrypt(key, iv, plaintext, utf8.encode(aad));
+  return { v: FORMAT_VERSION, iv: toBase64(iv), ciphertext: toBase64(ciphertext) };
 }
 
 /** @internal */
-export async function encryptBytes(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, aad: string): Promise<EncryptedBlob> {
-  const iv = randomBytes(IV_LENGTH);
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv, additionalData: utf8.encode(aad) },
-    key,
-    plaintext,
-  );
-  return { v: FORMAT_VERSION, iv: toBase64(iv), ciphertext: toBase64(new Uint8Array(ciphertext)) };
-}
-
-/** @internal */
-export async function decryptBytes(key: CryptoKey, blob: EncryptedBlob, aad: string): Promise<Uint8Array<ArrayBuffer>> {
+export async function decryptBytes<Key>(provider: CryptoProvider<Key>, key: Key, blob: EncryptedBlob, aad: string): Promise<Uint8Array<ArrayBuffer>> {
   if (blob.v !== FORMAT_VERSION) throw new UnsupportedFormatError(blob.v);
   try {
-    const plaintext = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: fromBase64(blob.iv), additionalData: utf8.encode(aad) },
-      key,
-      fromBase64(blob.ciphertext),
-    );
+    const plaintext = await provider.aesGcmDecrypt(key, fromBase64(blob.iv), fromBase64(blob.ciphertext), utf8.encode(aad));
     return new Uint8Array(plaintext);
   } catch {
     // GCM authentication failure: don't leak which part was wrong.
