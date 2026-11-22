@@ -163,12 +163,14 @@ export function ItemDetail({ entry, health, onEdit, onBack, headingRef }: {
 
 function Field({ label, mono, actions, children }: { label: string; mono?: boolean; actions?: ReactNode; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-border py-3 pr-3 pl-4 not-first:border-t">
-      <div className="min-w-0">
-        <dt className="text-[11px] font-semibold tracking-wide text-muted uppercase">{label}</dt>
-        <dd className={mono ? "font-mono text-[13px] break-all" : "wrap-break-word"}>{children}</dd>
-      </div>
-      <div className="flex items-center gap-0.5">{actions}</div>
+    // <dt> and <dd> must be direct children of this row, or screen readers lose which label goes
+    // with which value. So the buttons live inside the <dd>, next to the value they act on.
+    <div className="border-border py-3 pr-3 pl-4 not-first:border-t">
+      <dt className="text-[11px] font-semibold tracking-wide text-muted uppercase">{label}</dt>
+      <dd className="flex items-center gap-2">
+        <div className={mono ? "min-w-0 flex-1 font-mono text-[13px] break-all" : "min-w-0 flex-1 wrap-break-word"}>{children}</div>
+        <div className="flex items-center gap-0.5">{actions}</div>
+      </dd>
     </div>
   );
 }
