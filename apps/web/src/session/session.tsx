@@ -8,7 +8,7 @@ import {
 } from "@pass1/crypto";
 import type { AccountResponse } from "@pass1/shared";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { api, ApiRequestError, setSessionEndedHandler } from "../lib/api";
+import { api, ApiRequestError } from "../lib/api";
 import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
 
@@ -45,7 +45,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // If the server ends this session (from another device, or a password change elsewhere),
   // forget the keys here too.
   useEffect(() => {
-    setSessionEndedHandler(() => {
+    api.setSessionEndedHandler(() => {
       void clearClipboard();
       setSession({ status: "loggedOut" });
     });

@@ -1,8 +1,8 @@
+import { fetchChangesSince, mergeSyncedEntries, type VaultEntry } from "@pass1/core";
 import { decryptItem, encryptItem, newItemId, type VaultItem } from "@pass1/crypto";
 import { storedSize, type VaultItemResponse } from "@pass1/shared";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
-import { fetchChangesSince, mergeSyncedEntries } from "./sync";
 
 // The decrypted vault, held in memory while it's unlocked. When the vault locks, the screen
 // that owns this provider unmounts and the plaintext goes with it.
@@ -12,18 +12,6 @@ import { fetchChangesSince, mergeSyncedEntries } from "./sync";
 //
 // Unlocking loads the whole vault. After that, coming back to the tab fetches only what changed
 // on other devices (see sync.ts), so edits made on a phone show up without reloading.
-
-export interface VaultEntry {
-  id: string;
-  revision: number;
-  updatedAt: number;
-  /** Set when the item is in the trash. */
-  deletedAt: number | null;
-  /** Bytes this item counts against the plan's storage limit. */
-  size: number;
-  /** null when the item couldn't be decrypted, which means it was corrupted or tampered with. */
-  item: VaultItem | null;
-}
 
 interface VaultStore {
   /** null while loading. */
@@ -55,7 +43,7 @@ export function VaultProvider({ vaultKey, children }: { vaultKey: CryptoKey; chi
 
   const syncOnce = useCallback(async () => {
     try {
-      const changes = await fetchChangesSince(syncedVersion.current);
+      const changes = await fetchChangesSince(api, syncedVersion.current);
       const synced = await Promise.all(changes.items.map((row) => decryptRow(vaultKey, row)));
       const deletedIds = [...changes.deletedIds, ...removedHere.current];
       setEntries((current) => mergeSyncedEntries(current, synced, deletedIds, changes.replacesAll));

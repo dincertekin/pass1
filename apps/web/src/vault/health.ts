@@ -1,46 +1,9 @@
+import { findReused, healthScoreKey as scoreKey, strengthFromScore, type ItemHealth, type VaultEntry } from "@pass1/core";
 import { useEffect, useMemo, useState } from "react";
 import { loadStrengthChecker } from "../lib/password-strength";
-import type { VaultEntry } from "./vault-store";
 
-// Password health, worked out here in the browser from the decrypted vault. Nothing about it
-// is sent anywhere: the server can't compare passwords it can't read.
-
-export type Strength = "weak" | "good" | "strong";
-
-export interface ItemHealth {
-  /** null while the strength checker is still loading. */
-  strength: Strength | null;
-  /** Names of the other items that use the same password. */
-  reusedWith: string[];
-}
-
-/** zxcvbn's 0–4 score as a word. Below 3 is guessable by a determined attacker. */
-export function strengthFromScore(score: number): Strength {
-  return score >= 4 ? "strong" : score === 3 ? "good" : "weak";
-}
-
-/** For each item, the other items (not in the trash) sharing its password. */
-export function findReused(entries: VaultEntry[]): Map<string, string[]> {
-  const byPassword = new Map<string, VaultEntry[]>();
-  for (const entry of entries) {
-    if (entry.deletedAt !== null || !entry.item?.password) continue;
-    const group = byPassword.get(entry.item.password) ?? [];
-    group.push(entry);
-    byPassword.set(entry.item.password, group);
-  }
-  const reused = new Map<string, string[]>();
-  for (const group of byPassword.values()) {
-    if (group.length < 2) continue;
-    for (const entry of group) {
-      reused.set(entry.id, group.filter((other) => other !== entry).map((other) => other.item!.name));
-    }
-  }
-  return reused;
-}
-
-export function hasIssue(health: ItemHealth | undefined): boolean {
-  return !!health && (health.strength === "weak" || health.reusedWith.length > 0);
-}
+// The vault's password health as a React hook. The rules themselves are in @pass1/core,
+// shared with the phone app; this part only loads the strength checker and keeps the scores.
 
 /**
  * Health for every item. Reuse is known at once; strength appears once the checker's
@@ -87,8 +50,4 @@ export function useVaultHealth(entries: VaultEntry[]): Map<string, ItemHealth> {
     }
     return health;
   }, [entries, scores, reused]);
-}
-
-function scoreKey(entry: VaultEntry) {
-  return `${entry.id}@${entry.revision}`;
 }

@@ -1,6 +1,6 @@
 import { createExport, decryptItem, encryptItem, newItemId, openExport, type VaultItem } from "@pass1/crypto";
 import { exportFileSchema } from "@pass1/shared";
-import { fetchChangesSince } from "../vault/sync";
+import { fetchChangesSince } from "@pass1/core";
 import { api, ApiRequestError } from "./api";
 
 // Export: decrypt every item here, then encrypt them all into one file with the export password.
@@ -8,7 +8,7 @@ import { api, ApiRequestError } from "./api";
 
 /** Builds an encrypted export of all items not in the trash, and offers it as a download. */
 export async function exportVault(vaultKey: CryptoKey, password: string): Promise<number> {
-  const { items: rows } = await fetchChangesSince(0);
+  const { items: rows } = await fetchChangesSince(api, 0);
   const items: VaultItem[] = [];
   for (const row of rows) {
     if (row.deletedAt !== null) continue;

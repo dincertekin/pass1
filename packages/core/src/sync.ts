@@ -2,8 +2,8 @@
 // The server side, and why versions instead of timestamps, is in apps/api/src/vault/sync.ts.
 
 import type { VaultItemResponse } from "@pass1/shared";
-import { api } from "../lib/api";
-import type { VaultEntry } from "./vault-store";
+import type { ApiClient } from "./api-client";
+import type { VaultEntry } from "./entries";
 
 export interface VaultChanges {
   items: VaultItemResponse[];
@@ -16,9 +16,10 @@ export interface VaultChanges {
 
 /**
  * Asks the server for everything that changed after `since`, following pages until the end.
- * Input: 0 for the whole vault, or the version from the last call. Output: the changes.
+ * Input: the API client, and 0 for the whole vault or the version from the last call.
+ * Output: the changes.
  */
-export async function fetchChangesSince(since: number): Promise<VaultChanges> {
+export async function fetchChangesSince(api: Pick<ApiClient, "listItems">, since: number): Promise<VaultChanges> {
   const changes: VaultChanges = { items: [], deletedIds: [], version: since, replacesAll: false };
   for (;;) {
     const page = await api.listItems(changes.version);

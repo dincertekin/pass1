@@ -116,6 +116,8 @@ At its core it works the same way: your vault is encrypted on your device. pass1
 packages/crypto   Key derivation, vault key wrapping, item encryption, on any platform's crypto
                   provider that passes the conformance checks (src/conformance.ts)
 packages/shared   zod schemas for API requests and responses, plan limits
+packages/core     What every app shares, without browser or React: API client, sync, search,
+                  password health, importers
 apps/api          Fastify + TypeScript REST API, Drizzle ORM on Postgres (PGlite in development)
 apps/web          React + TypeScript + Vite client
 apps/e2e          Playwright end-to-end tests against the production build

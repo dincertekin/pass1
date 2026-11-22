@@ -1,8 +1,8 @@
 import { clsx } from "clsx";
 import { useSettings } from "../lib/settings";
-import { displayName } from "./entries";
+import { displayName } from "@pass1/core";
 import { tileStyle } from "./tiles";
-import type { VaultEntry } from "./vault-store";
+import type { VaultEntry } from "@pass1/core";
 
 const sizes = {
   md: "size-9 rounded-lg text-[15px]",

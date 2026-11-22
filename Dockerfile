@@ -10,6 +10,7 @@ FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 # Package files first, so `npm ci` is cached until a dependency changes.
 COPY package.json package-lock.json tsconfig.base.json ./
+COPY packages/core/package.json packages/core/
 COPY packages/crypto/package.json packages/crypto/
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
@@ -25,6 +26,7 @@ RUN npm run build -w @pass1/web && npm run build -w @pass1/api
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/core/package.json packages/core/
 COPY packages/crypto/package.json packages/crypto/
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/

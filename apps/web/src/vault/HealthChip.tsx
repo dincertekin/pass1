@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import type { ItemHealth } from "./health";
+import type { ItemHealth } from "@pass1/core";
 
 /** "Reused", "Weak", "Good" or "Strong". Reuse wins: it's the bigger risk even for a strong password. */
 export function healthLabel(health: ItemHealth | undefined): { text: string; tone: "danger" | "warning" | "success" } | null {

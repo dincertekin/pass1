@@ -7,7 +7,8 @@ import { Button } from "../components/ui/Button";
 import { PasswordField, TextAreaField, TextField } from "../components/ui/TextField";
 import { errorMessage } from "../session/session";
 import { PasswordGenerator } from "./PasswordGenerator";
-import { useVault, type VaultEntry } from "./vault-store";
+import type { VaultEntry } from "@pass1/core";
+import { useVault } from "./vault-store";
 
 /** Creates a new item when `entry` is null, otherwise edits it. */
 export function ItemEditor({ entry, onSaved, onCancel }: {

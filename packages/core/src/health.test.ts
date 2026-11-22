@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findReused, hasIssue, strengthFromScore } from "./health";
-import type { VaultEntry } from "./vault-store";
+import type { VaultEntry } from "./entries";
 
 function entry(id: string, name: string, password: string, deletedAt: number | null = null): VaultEntry {
   return { id, revision: 1, updatedAt: 0, deletedAt, size: 272, item: { name, password } };

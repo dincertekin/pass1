@@ -47,8 +47,8 @@ Mobile apps can't use code that touches `window`, `document` or `crypto.subtle` 
 - [x] **A crypto provider interface** in `packages/crypto`: Argon2id, HKDF-SHA256, AES-256-GCM and secure random, behind one small interface. The web keeps Web Crypto and `hash-wasm`. Mobile gets native implementations (Phase 4).
   - Trap: React Native's JavaScript engine (Hermes) has no `crypto.subtle` and can't run WebAssembly like a browser, so `hash-wasm` won't run there as it is.
 - [x] **A conformance test suite** that runs the pinned test vector, and a few hundred random round trips, against *any* provider. Every platform must pass it before it touches a real vault. This is the most important test in the whole plan: a provider that encrypts slightly differently breaks vaults across devices.
-- [ ] **`packages/core`** for logic with no browser in it: vault entries and search, password health, importers (Chrome, Bitwarden, 1Password...), the generator, plan limits, the API client.
-- [ ] The web app uses the new packages, and its tests still pass unchanged.
+- [x] **`packages/core`** for logic with no browser in it: vault entries and search, password health, importers (Chrome, Bitwarden, 1Password...), sync, the API client. The generator stays in `@pass1/crypto` and plan limits in `@pass1/shared`, which every app can already use.
+- [x] The web app uses the new packages, and its tests still pass unchanged.
 - [ ] **Translations.** Every UI string is hard-coded English today. Move them into one message file per language, shared by web, desktop and mobile, before there are three apps to change. Dates and numbers through `Intl`, so no library is needed.
 - [ ] **Design tokens shared by every app.** Colors, spacing and type sizes from `apps/web/src/styles/tokens.css` move into `packages/core` as plain values, so the phone app and the web app look like the same product.
 - [ ] **Accessibility as a test, not a hope.** Keyboard and screen reader checks in the e2e tests (axe has no runtime dependency in the app). Phase 4 adds VoiceOver and TalkBack checks.

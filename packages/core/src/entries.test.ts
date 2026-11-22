@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hostOf, inSection, matchesQuery, safeHref } from "./entries";
-import type { VaultEntry } from "./vault-store";
+import type { VaultEntry } from "./entries";
 
 function entry(overrides: Partial<VaultEntry> = {}, item: VaultEntry["item"] = { name: "GitHub", password: "x" }): VaultEntry {
   return { id: "1", revision: 1, updatedAt: 0, deletedAt: null, size: 272, item, ...overrides };

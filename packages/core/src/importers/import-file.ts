@@ -1,8 +1,8 @@
 import type { VaultItem } from "@pass1/crypto";
 import { parseCsv } from "./csv";
 
-// Turns another password manager's export into pass1 items. Everything happens in this
-// browser: the file is read here, and only the encrypted items are sent to the server.
+// Turns another password manager's export into pass1 items. Everything happens on this
+// device: the file is read here, and only the encrypted items are sent to the server.
 
 export class ImportFileError extends Error {
   constructor(message: string) {

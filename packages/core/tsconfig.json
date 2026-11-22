@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // DOM only for the types of fetch, URL and Response, which phones have too. Node only for
+    // the tests. Browser-only and Node-only APIs are off limits in the source;
+    // platform-free.test.ts checks, since these settings can't.
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

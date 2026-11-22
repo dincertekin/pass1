@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { Activity, Dices, Lock, Plus, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSession } from "../session/session";
-import { SECTION_LABELS, type Section } from "./entries";
+import { SECTION_LABELS, type Section } from "@pass1/core";
 
 // Phone-only parts of the vault: the header with filter chips, the floating New button and the
 // tab bar at the bottom, where thumbs reach. Hidden from md up, where the sidebar takes over.

@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { StrengthMeter } from "../components/StrengthMeter";
 import { Button } from "../components/ui/Button";
 import { PasswordField } from "../components/ui/TextField";
-import { ImportFileError, itemsFromFile } from "../lib/importers/import-file";
+import { ImportFileError, itemsFromFile } from "@pass1/core";
 import { MIN_MASTER_PASSWORD_SCORE, usePasswordStrength } from "../lib/password-strength";
 import { addItems, exportVault, InvalidExportFileError, itemsFromPass1Export } from "../lib/vault-transfer";
 import { errorMessage } from "../session/session";

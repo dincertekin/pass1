@@ -6,11 +6,12 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { IconButton } from "../components/ui/IconButton";
 import { errorMessage } from "../session/session";
 import { CopyButton } from "./CopyButton";
-import { displayName, safeHref } from "./entries";
-import type { ItemHealth } from "./health";
+import { displayName, safeHref } from "@pass1/core";
+import type { ItemHealth } from "@pass1/core";
 import { HealthChip } from "./HealthChip";
 import { ItemAvatar } from "./ItemAvatar";
-import { useVault, type VaultEntry } from "./vault-store";
+import type { VaultEntry } from "@pass1/core";
+import { useVault } from "./vault-store";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 

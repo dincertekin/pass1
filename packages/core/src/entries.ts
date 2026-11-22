@@ -1,6 +1,18 @@
-import type { VaultEntry } from "./vault-store";
+import type { VaultItem } from "@pass1/crypto";
 
-// Small pure helpers for showing entries. Kept here so the components stay about layout.
+// Vault entries as every app holds them once decrypted, and small helpers for showing them.
+
+export interface VaultEntry {
+  id: string;
+  revision: number;
+  updatedAt: number;
+  /** Set when the item is in the trash. */
+  deletedAt: number | null;
+  /** Bytes this item counts against the plan's storage limit. */
+  size: number;
+  /** null when the item couldn't be decrypted, which means it was corrupted or tampered with. */
+  item: VaultItem | null;
+}
 
 export type Section = "all" | "favorites" | "health" | "trash";
 

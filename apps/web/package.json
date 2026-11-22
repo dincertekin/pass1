@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@pass1/core": "*",
     "@pass1/crypto": "*",
     "@pass1/shared": "*",
     "@zxcvbn-ts/core": "4.2.0",

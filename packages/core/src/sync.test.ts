@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mergeSyncedEntries } from "./sync";
-import type { VaultEntry } from "./vault-store";
+import type { VaultEntry } from "./entries";
 
 function entry(id: string, revision = 1, name = "GitHub"): VaultEntry {
   return { id, revision, updatedAt: 0, deletedAt: null, size: 272, item: { name, password: "x" } };

@@ -1,16 +1,7 @@
+import { tileColor } from "@pass1/core";
 import type { CSSProperties } from "react";
 
-// Each item gets a muted color for its tile, picked from its name, so the same site always
-// has the same color and the list is easier to scan. Only initials: real site icons would
-// mean fetching them from somewhere, which tells that server which sites you use.
-
-const TILE_COLORS = ["blue", "teal", "plum", "ochre", "brick", "moss", "slate"] as const;
-
-export function tileColor(name: string): (typeof TILE_COLORS)[number] {
-  let hash = 0;
-  for (const char of name.trim().toLowerCase()) hash = (hash * 31 + char.codePointAt(0)!) >>> 0;
-  return TILE_COLORS[hash % TILE_COLORS.length]!;
-}
+// The web's tile styles. Which color an item gets is decided in @pass1/core (tiles.ts).
 
 /** Inline colors for a tile. `colorful: false` gives the plain grey look (Settings → General). */
 export function tileStyle(name: string, colorful: boolean): CSSProperties {

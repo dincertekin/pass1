@@ -4,11 +4,11 @@ import type { KeyboardEvent, RefObject } from "react";
 import { Button } from "../components/ui/Button";
 import { useSettings } from "../lib/settings";
 import { MOD_KEY } from "../lib/shortcuts";
-import { displayName, hostOf, SECTION_LABELS, type Section } from "./entries";
-import type { ItemHealth } from "./health";
+import { displayName, hostOf, SECTION_LABELS, type Section } from "@pass1/core";
+import type { ItemHealth } from "@pass1/core";
 import { HealthChip } from "./HealthChip";
 import { ItemAvatar } from "./ItemAvatar";
-import type { VaultEntry } from "./vault-store";
+import type { VaultEntry } from "@pass1/core";
 
 export function ItemList({ entries, total, health, section, query, onQueryChange, selectedId, onSelect, onOpen, onNew, searchRef }: {
   entries: VaultEntry[];

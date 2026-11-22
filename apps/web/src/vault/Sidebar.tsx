@@ -8,8 +8,8 @@ import { useBilling } from "../lib/billing";
 import { useLockCountdown } from "../session/auto-lock";
 import { MOD_KEY } from "../lib/shortcuts";
 import { useSession } from "../session/session";
-import { SECTION_LABELS, type Section } from "./entries";
-import type { VaultEntry } from "./vault-store";
+import { SECTION_LABELS, type Section } from "@pass1/core";
+import type { VaultEntry } from "@pass1/core";
 
 const SECTION_ICONS: Record<Section, ReactNode> = {
   all: <List size={15} />,
