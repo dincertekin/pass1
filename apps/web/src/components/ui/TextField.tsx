@@ -17,7 +17,7 @@ export function TextField({ label, mono, hint, className, ...props }: TextFieldP
       <label htmlFor={id} className="text-[13px] font-medium">
         {label}
       </label>
-      <InputFrame>
+      <InputFrame readOnly={props.readOnly}>
         <input id={id} className={inputClass(mono, className)} {...props} />
       </InputFrame>
       {hint}
@@ -82,11 +82,13 @@ export function TextAreaField({ label, className, ...props }: Omit<TextareaHTMLA
   );
 }
 
-function InputFrame({ children }: { children: ReactNode }) {
+/** `readOnly` looks sunken and muted, so nobody mistakes it for a field they can type in. */
+function InputFrame({ children, readOnly }: { children: ReactNode; readOnly?: boolean }) {
   return (
     <div
       className={clsx(
-        "flex h-9 items-center rounded-md border border-border-strong bg-surface pr-1",
+        "flex h-9 items-center rounded-md border pr-1",
+        readOnly ? "border-border bg-sunken text-muted" : "border-border-strong bg-surface",
         "focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft",
       )}
     >
@@ -97,7 +99,7 @@ function InputFrame({ children }: { children: ReactNode }) {
 
 function inputClass(mono: boolean | undefined, className: string | undefined) {
   return clsx(
-    "h-full min-w-0 flex-1 bg-transparent px-2.5 text-text outline-none placeholder:text-muted",
+    "h-full min-w-0 flex-1 bg-transparent px-2.5 text-text outline-none placeholder:text-muted read-only:text-muted",
     mono && "font-mono text-[13px]",
     className,
   );

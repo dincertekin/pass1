@@ -38,8 +38,8 @@ pass1 is a **zero-knowledge password manager** for the web. Your vault is encryp
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshot-register.png" alt="Creating a vault: a master password strength meter and a warning that there is no password reset"></td>
-    <td>Creating a vault. There is no password reset, because the server never sees the master password.<br><br><sub>Screenshots use demo data.</sub></td>
+    <td width="50%"><img src="docs/assets/screenshot-register.png" alt="Creating a vault from the sign-up link: the email filled in from the link, a master password strength meter and a warning that there is no password reset"></td>
+    <td>Creating a vault, from the link in the sign-up email. There is no password reset, because the server never sees the master password.<br><br><sub>Screenshots use demo data.</sub></td>
   </tr>
 </table>
 
