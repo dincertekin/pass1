@@ -29,6 +29,8 @@ export const sessionInfoSchema = z.object({
   lastUsedAt: z.int(),
   /** The browser's User-Agent at login, for telling devices apart. */
   userAgent: z.string().nullable(),
+  /** An app's name for its device, e.g. "Ada's iPhone". Null for browsers. */
+  deviceName: z.string().nullable(),
   /** The session making this request. */
   current: z.boolean(),
 });

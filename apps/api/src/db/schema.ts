@@ -7,6 +7,9 @@ import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueInde
 // Development and tests run the same schema on PGlite (Postgres compiled to WebAssembly),
 // so there's one dialect everywhere and no "works in development, breaks in production" surprises.
 
+/** How a session's token travels: in the web's httpOnly cookie, or as an app's bearer token. */
+export const SESSION_TRANSPORTS = ["cookie", "token"] as const;
+
 /** Paddle's subscription statuses (see billing/webhooks.ts for what each means for the plan). */
 export const SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due", "paused", "canceled"] as const;
 
@@ -49,6 +52,11 @@ export const sessions = pgTable(
     createdAt: createdAt(),
     // Shown in Settings → Devices so people can tell their sessions apart.
     userAgent: text("user_agent"),
+    // An app's own name for the device, e.g. "Ada's iPhone". Null for the web, which shows the browser instead.
+    deviceName: text("device_name"),
+    // A session only works the way it was created: a cookie session never as a bearer token, and
+    // the other way round (see auth/sessions.ts).
+    transport: text("transport", { enum: SESSION_TRANSPORTS }).notNull().default("cookie"),
     // Updated at most every few minutes (see auth/sessions.ts), not on every request.
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
   },

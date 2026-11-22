@@ -75,3 +75,9 @@ Found and fixed earlier during development, and covered by tests since:
 ## Before public launch (Phase 8)
 
 An independent security audit with a published report, a vulnerability disclosure policy and `security.txt`, email verification, a CAPTCHA on sign-up and repeated login failures, and published release hashes.
+
+## Changes since this review
+
+Security-relevant changes made after 19 October 2026, for the next review to check:
+
+- **22 November 2026, sessions for apps.** Apps get a bearer token (90 days) instead of a cookie. Browsers can never get one: an app session is refused when the request has an `Origin` header, which browsers always send and can't remove. Each session only works the way it was created (cookie or token). The Origin check changed to match: a foreign `Origin` is refused as before, and a request without `Origin` is allowed only when it carries no session cookie. CSRF needs the cookie, and browsers always send `Origin` when changing data. See `apps/api/src/app.ts` and `apps/api/src/auth/sessions.ts`.

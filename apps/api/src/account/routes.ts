@@ -67,6 +67,7 @@ export function accountRoutes(app: FastifyInstance, { db, config, paddle }: AppD
         createdAt: row.createdAt.getTime(),
         lastUsedAt: row.lastUsedAt.getTime(),
         userAgent: row.userAgent,
+        deviceName: row.deviceName,
         current: row.id === sessionId,
       })),
     };

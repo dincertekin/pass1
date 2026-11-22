@@ -80,7 +80,7 @@ The latest security review, with every finding and accepted risk: [docs/security
 | Creating accounts in bulk cheaply: each sign-up costs about a second of computing | |
 | Finding out which emails have accounts: sign-up always says "check your inbox", and the email tells the owner what happened | |
 
-**What the server can see:** your email, and for an hour, any email address someone asked to sign up with; how many items you have and their sizes (padded to 256 bytes); when each was created, changed, moved to the trash or deleted (the IDs of deleted items are kept, so your other devices can remove them too); and, for each logged-in device, the browser name and when it was last used. It never sees item names, websites, usernames, passwords or notes, and it doesn't log IP addresses.
+**What the server can see:** your email, and for an hour, any email address someone asked to sign up with; how many items you have and their sizes (padded to 256 bytes); when each was created, changed, moved to the trash or deleted (the IDs of deleted items are kept, so your other devices can remove them too); and, for each logged-in device, the browser name (or the name an app gives its device) and when it was last used. It never sees item names, websites, usernames, passwords or notes, and it doesn't log IP addresses.
 
 **There is no account recovery.** If the master password is lost, the vault cannot be decrypted. That is the point of zero knowledge.
 

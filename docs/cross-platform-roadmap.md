@@ -60,12 +60,12 @@ Translations moved to the start of Phase 4 (22 November 2026). With English as t
 
 The API was built for one browser on one origin. Native apps have no origin and handle cookies poorly.
 
-- [ ] **Token sign-in for apps.** Apps send the session token in an `Authorization` header and keep it in the iOS Keychain or Android Keystore. The web keeps its `__Host-` cookie.
+- [x] **Token sign-in for apps.** Apps send the session token in an `Authorization` header and keep it in the iOS Keychain or Android Keystore. The web keeps its `__Host-` cookie.
   - The Origin check exists to stop other sites using the cookie (CSRF). Keep it for every request that carries the cookie. Requests with a header token can't be forged that way, so they don't need it.
-- [ ] **Device names from the app**, not from the user agent, for the sessions list. Still no IP addresses.
+- [x] **Device names from the app**, not from the user agent, for the sessions list. Still no IP addresses.
 - [ ] **A minimum supported app version.** Old mobile apps stay installed for years. The API must be able to say "please update" before a crypto or API change breaks them.
 - [ ] **API versioning** (`/api/v1/`), so the web and the apps can change at different speeds.
-- [ ] Rate limits and the login throttle apply per account and per token, the same as for the web.
+- [x] Rate limits and the login throttle apply to apps exactly as to the web (per IP, and per account for logins).
 - [ ] **Able to run on more than one server.** Cheap to do now, painful to do during an outage:
   - Rate limits and the login block move from memory into Postgres (accepted risk C). Postgres first, because it's already there and backed up. Redis only if load tests show Postgres can't keep up.
   - Migrations become a separate deploy step instead of running when each app starts (`apps/api/src/db/client.ts` already warns about this).

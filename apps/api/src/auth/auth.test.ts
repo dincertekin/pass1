@@ -320,13 +320,17 @@ describe("Proving a person is signing up", () => {
 });
 
 describe("request safety", () => {
-  it("rejects writes without the web app's Origin", async () => {
+  it("refuses writes from another site", async () => {
     const body = registerBody(await signupTokenFor(ctx));
-    const missing = await post("/api/auth/register", body, {});
     const wrong = await post("/api/auth/register", body, { origin: "https://evil.example" });
-    expect(missing.statusCode).toBe(403);
     expect(wrong.statusCode).toBe(403);
     expect(wrong.json().error.code).toBe("FORBIDDEN");
+  });
+
+  it("refuses a write that carries the session cookie but no Origin", async () => {
+    const { token } = await registered();
+    const res = await ctx.app.inject({ method: "POST", url: "/api/auth/logout", cookies: { [COOKIE]: token } });
+    expect(res.statusCode).toBe(403);
   });
 
   it("answers malformed JSON with the standard error shape", async () => {
@@ -350,6 +354,84 @@ describe("request safety", () => {
     const res = await ctx.app.inject({ method: "GET", url: "/api/health" });
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
     expect(res.headers["strict-transport-security"]).toBeDefined();
+  });
+});
+
+describe("Apps signing in with a token", () => {
+  const APP = { deviceName: "Ada's iPhone" };
+
+  /** Logs in like a phone app: no Origin header, asking for a token. */
+  async function appLogin(authKey: string) {
+    return ctx.app.inject({ method: "POST", url: "/api/auth/login", payload: { email: "ada@example.com", authKey, appSession: APP } });
+  }
+
+  function asApp(token: string, method: "GET" | "POST", url: string, payload?: object) {
+    return ctx.app.inject({ method, url, payload, headers: { authorization: `Bearer ${token}` } });
+  }
+
+  it("an app gets a token instead of a cookie, and uses it without an Origin header", async () => {
+    const { body } = await registered();
+    const res = await appLogin(body.authKey);
+    expect(res.statusCode).toBe(200);
+    expect(sessionCookie(res)).toBeUndefined();
+    const { sessionToken } = res.json();
+    expect(sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    expect((await asApp(sessionToken, "GET", "/api/auth/me")).json().user.email).toBe("ada@example.com");
+    const created = await asApp(sessionToken, "POST", "/api/vault/items", { id: crypto.randomUUID(), data: { v: 1, iv: b64(12), ciphertext: b64(272) } });
+    expect(created.statusCode).toBe(201);
+  });
+
+  it("a browser can't get a token, even when it asks for one", async () => {
+    const { body } = await registered();
+    const res = await post("/api/auth/login", { email: "ada@example.com", authKey: body.authKey, appSession: APP });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toBe("App sessions can't be started from a browser.");
+  });
+
+  it("an app can create its account with a token too", async () => {
+    const signupToken = await signupTokenFor(ctx);
+    const res = await ctx.app.inject({ method: "POST", url: "/api/auth/register", payload: { ...registerBody(signupToken), appSession: APP } });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().sessionToken).toEqual(expect.any(String));
+    expect(sessionCookie(res)).toBeUndefined();
+  });
+
+  it("a token only works as a token, and a cookie only as a cookie", async () => {
+    const { body, token: cookieToken } = await registered();
+    const appToken = (await appLogin(body.authKey)).json().sessionToken;
+
+    const tokenAsCookie = await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: appToken } });
+    const cookieAsToken = await asApp(cookieToken, "GET", "/api/auth/me");
+    expect(tokenAsCookie.statusCode).toBe(401);
+    expect(cookieAsToken.statusCode).toBe(401);
+  });
+
+  it("logging out ends the app's session and nothing else", async () => {
+    const { body, token: cookieToken } = await registered();
+    const appToken = (await appLogin(body.authKey)).json().sessionToken;
+
+    expect((await asApp(appToken, "POST", "/api/auth/logout")).statusCode).toBe(204);
+    expect((await asApp(appToken, "GET", "/api/auth/me")).statusCode).toBe(401);
+    expect((await ctx.app.inject({ method: "GET", url: "/api/auth/me", cookies: { [COOKIE]: cookieToken } })).statusCode).toBe(200);
+  });
+
+  it("shows the app's device name in the list of devices", async () => {
+    const { body, token: cookieToken } = await registered();
+    await appLogin(body.authKey);
+    const list = await ctx.app.inject({ method: "GET", url: "/api/account/sessions", cookies: { [COOKIE]: cookieToken } });
+    const names = list.json().sessions.map((s: { deviceName: string | null }) => s.deviceName);
+    expect(names).toContain("Ada's iPhone");
+    expect(names).toContain(null);
+  });
+
+  it("keeps an app signed in for 90 days, and the web for 14", async () => {
+    const { body } = await registered();
+    await appLogin(body.authKey);
+    const days = (await ctx.db.select().from(sessions))
+      .map((s) => Math.round((s.expiresAt.getTime() - s.createdAt.getTime()) / 86_400_000))
+      .sort((a, b) => a - b);
+    expect(days).toEqual([14, 90]);
   });
 });
 

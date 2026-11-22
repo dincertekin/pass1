@@ -52,7 +52,8 @@ export function DevicesTab() {
                 <span aria-hidden="true" className="grid size-8.5 place-items-center rounded-lg bg-sunken text-muted">
                   <Icon size={17} />
                 </span>
-                {describeUserAgent(s.userAgent)}
+                {/* Apps name their device ("Ada's iPhone"); browsers are described from their User-Agent. */}
+                {s.deviceName ?? describeUserAgent(s.userAgent)}
               </span>
             }
             hint={<span className="pl-11.5">Last active {dateFormat.format(s.lastUsedAt)}</span>}

@@ -13,6 +13,7 @@ Everything below is done and tested. What's next is in the [roadmap](../README.m
 - [x] Config from env, validated at startup
 - [x] Auth: prelogin with fake salts for unknown emails, register, login, logout; hashed session tokens in an httpOnly, Secure, SameSite=Strict cookie
 - [x] Rate limits, security headers, Origin check on every request that changes data, per-account login throttle
+- [x] Bearer tokens for apps (90 days, kept in the Keychain or Keystore); browsers can never get one, and each session only works the way it was created
 - [x] Register screen with strength meter and "no recovery" acknowledgment; unlock screen; Argon2id in a Web Worker
 - [x] Keys in memory only; reloading or locking clears them, verified with Chrome heap snapshots
 - [x] Vault: create, edit, trash, restore, favorites, search, keyboard shortcuts; three panes with a resizable list, stacked on mobile

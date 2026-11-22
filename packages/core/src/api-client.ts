@@ -9,6 +9,7 @@ import {
   preloginResponseSchema,
   redirectResponseSchema,
   vaultItemResponseSchema,
+  type AppSession,
   type ChangePasswordRequest,
   type CheckoutRequest,
   type CreateItemRequest,
@@ -40,21 +41,32 @@ export interface ApiClientOptions {
   baseUrl: string;
   /** Tests pass a fake. Defaults to the runtime's fetch. */
   fetch?: typeof fetch;
+  /**
+   * Apps only: returns the bearer token to send (kept in the Keychain or Keystore), or null
+   * before logging in. The web leaves this out and uses its cookie.
+   */
+  getSessionToken?: () => string | null;
 }
 
 interface RequestContext {
   baseUrl: string;
   fetch: typeof fetch;
+  getSessionToken: () => string | null;
   /** Called when the server says the session is gone (see setSessionEndedHandler). */
   onSessionEnded: () => void;
 }
 
 async function sendRequest<T>(context: RequestContext, method: string, path: string, schema: z.ZodType<T> | null, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["content-type"] = "application/json";
+  const sessionToken = context.getSessionToken();
+  if (sessionToken) headers.authorization = `Bearer ${sessionToken}`;
+
   let res: Response;
   try {
     res = await context.fetch(context.baseUrl + path, {
       method,
-      headers: body === undefined ? {} : { "content-type": "application/json" },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -83,8 +95,8 @@ async function sendRequest<T>(context: RequestContext, method: string, path: str
  */
 // The default fetch is wrapped: browsers throw "Illegal invocation" when their fetch is called
 // as a method of another object, which context.fetch(...) would do.
-export function createApiClient({ baseUrl, fetch: fetchImpl = (...args) => fetch(...args) }: ApiClientOptions) {
-  const context: RequestContext = { baseUrl, fetch: fetchImpl, onSessionEnded: () => {} };
+export function createApiClient({ baseUrl, fetch: fetchImpl = (...args) => fetch(...args), getSessionToken = () => null }: ApiClientOptions) {
+  const context: RequestContext = { baseUrl, fetch: fetchImpl, getSessionToken, onSessionEnded: () => {} };
   const request = <T>(method: string, path: string, schema: z.ZodType<T> | null, body?: unknown) =>
     sendRequest(context, method, path, schema, body);
 
@@ -102,7 +114,9 @@ export function createApiClient({ baseUrl, fetch: fetchImpl = (...args) => fetch
     checkSignup: (signupToken: string) => request("POST", "/auth/signup/check", checkSignupResponseSchema, { signupToken }),
     prelogin: (email: string) => request("POST", "/auth/prelogin", preloginResponseSchema, { email }),
     register: (body: RegisterRequest) => request("POST", "/auth/register", accountResponseSchema, body),
-    login: (email: string, authKey: string) => request("POST", "/auth/login", accountResponseSchema, { email, authKey }),
+    /** Apps pass `appSession` to get a bearer token (response.sessionToken) instead of a cookie. */
+    login: (email: string, authKey: string, appSession?: AppSession) =>
+      request("POST", "/auth/login", accountResponseSchema, { email, authKey, appSession }),
     logout: () => request("POST", "/auth/logout", null),
     me: () => request("GET", "/auth/me", accountResponseSchema),
 

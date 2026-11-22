@@ -37,6 +37,15 @@ export const checkSignupRequestSchema = z.object({ signupToken: signupTokenSchem
 export const checkSignupResponseSchema = z.object({ email: z.string() });
 export type CheckSignupResponse = z.infer<typeof checkSignupResponseSchema>;
 
+/**
+ * Sent by an app (never the web) to get a bearer token instead of a cookie. The server refuses
+ * it from browsers. `deviceName` is shown in Settings → Devices, e.g. "Ada's iPhone".
+ */
+export const appSessionSchema = z.object({
+  deviceName: z.string().trim().min(1).max(100),
+});
+export type AppSession = z.infer<typeof appSessionSchema>;
+
 /** Step 2: POST /auth/register, from the page the sign-up link opens. The email comes from the token. */
 export const registerRequestSchema = z.object({
   signupToken: signupTokenSchema,
@@ -44,12 +53,14 @@ export const registerRequestSchema = z.object({
   kdfSalt: kdfSaltSchema,
   kdfParams: kdfParamsSchema,
   wrappedVaultKey: encryptedBlobSchema,
+  appSession: appSessionSchema.optional(),
 });
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 
 export const loginRequestSchema = z.object({
   email: emailSchema,
   authKey: authKeySchema,
+  appSession: appSessionSchema.optional(),
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
@@ -67,5 +78,10 @@ export const accountResponseSchema = z.object({
   kdfSalt: kdfSaltSchema,
   kdfParams: kdfParamsSchema,
   wrappedVaultKey: encryptedBlobSchema,
+  /**
+   * Only for apps that sent `appSession`: the bearer token for the Authorization header.
+   * Keep it in the iOS Keychain or Android Keystore, never in plain storage.
+   */
+  sessionToken: z.string().optional(),
 });
 export type AccountResponse = z.infer<typeof accountResponseSchema>;

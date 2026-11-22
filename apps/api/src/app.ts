@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import Fastify, { type FastifyInstance } from "fastify";
 import { accountRoutes } from "./account/routes.js";
 import { authRoutes } from "./auth/routes.js";
+import { sessionCookieName } from "./auth/sessions.js";
 import { createPaddleClient, type PaddleClient } from "./billing/paddle.js";
 import { billingRoutes, WEBHOOK_PATH } from "./billing/routes.js";
 import { billingSettings } from "./billing/settings.js";
@@ -60,12 +61,18 @@ export async function buildApp(appDeps: AppDeps) {
   // Off by default; each route opts in with its own limit (see auth/routes.ts).
   await app.register(rateLimit, { global: false });
 
-  // Second line of defense against cross-site requests, after SameSite=Strict cookies:
-  // anything that changes data must come from the web app's own origin.
+  // Second line of defense against cross-site requests (CSRF), after SameSite=Strict cookies.
+  // CSRF means another site making a visitor's browser send our cookie, so:
+  // - a request from another origin is refused;
+  // - a request without an Origin header is allowed only without our cookie. Browsers always send
+  //   Origin when changing data, so these come from apps, which authenticate with a bearer
+  //   token that no other site can make a browser send.
   app.addHook("onRequest", async (request) => {
     // Paddle's webhook comes from Paddle's servers, not the web app; its signature proves it instead.
-    if (request.url === WEBHOOK_PATH) return;
-    if (UNSAFE_METHODS.has(request.method) && request.headers.origin !== config.WEB_ORIGIN) {
+    if (request.url === WEBHOOK_PATH || !UNSAFE_METHODS.has(request.method)) return;
+    const origin = request.headers.origin;
+    const hasSessionCookie = request.cookies[sessionCookieName(config)] !== undefined;
+    if (origin === undefined ? hasSessionCookie : origin !== config.WEB_ORIGIN) {
       throw new ApiError(403, "FORBIDDEN", "Request origin not allowed.");
     }
   });

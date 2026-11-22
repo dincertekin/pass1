@@ -5,12 +5,13 @@ import {
   registerRequestSchema,
   signupRequestSchema,
   type AccountResponse,
+  type AppSession,
   type ChallengeResponse,
   type CheckSignupResponse,
   type PreloginResponse,
 } from "@pass1/shared";
 import { eq } from "drizzle-orm";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createHmac } from "node:crypto";
 import type { RouteDeps } from "../app.js";
 import { users, type User } from "../db/schema.js";
@@ -72,6 +73,7 @@ export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
   /** Step 2: the page the sign-up link opens sends the token with the newly derived keys. */
   app.post("/auth/register", { config: { rateLimit: limits.register } }, async (request, reply) => {
     const body = parseBody(registerRequestSchema, request.body);
+    refuseAppSessionFromBrowser(request, body.appSession);
 
     // A cheap check before the expensive Argon2 hash. The token is only used up further down.
     const email = await findSignupEmail(db, body.signupToken);
@@ -105,12 +107,13 @@ export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
       throw err;
     }
 
-    await startSession(db, config, request, reply, user.id);
-    return reply.status(201).send(toAccountResponse(user));
+    const sessionToken = await startSession(db, config, request, reply, user.id, body.appSession);
+    return reply.status(201).send(withSessionToken(toAccountResponse(user), sessionToken));
   });
 
   app.post("/auth/login", { config: { rateLimit: limits.login } }, async (request, reply): Promise<AccountResponse> => {
-    const { email, authKey } = parseBody(loginRequestSchema, request.body);
+    const { email, authKey, appSession } = parseBody(loginRequestSchema, request.body);
+    refuseAppSessionFromBrowser(request, appSession);
 
     // Checked before anything else, and for unknown emails too (see auth/login-throttle.ts).
     const wait = throttle.retryAfter(email);
@@ -132,8 +135,8 @@ export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
     }
 
     throttle.recordSuccess(email);
-    await startSession(db, config, request, reply, user.id);
-    return toAccountResponse(user);
+    const sessionToken = await startSession(db, config, request, reply, user.id, appSession);
+    return withSessionToken(toAccountResponse(user), sessionToken);
   });
 
   app.post("/auth/logout", async (request, reply) => {
@@ -185,4 +188,20 @@ function isUniqueViolation(err: unknown): boolean {
 function proofOfWorkMessage(result: ProofOfWorkResult): string {
   if (result === PROOF_OF_WORK_RESULT.EXPIRED) return "The sign-up check took too long. Try again.";
   return "The sign-up check failed. Reload the page and try again.";
+}
+
+/**
+ * Browsers get a cookie, never a bearer token: a token could be copied out of the page by
+ * injected script, and a cookie can't. Browsers always send an Origin header here and can't
+ * remove it, so an app session asked for with one is refused.
+ */
+function refuseAppSessionFromBrowser(request: FastifyRequest, appSession: AppSession | undefined) {
+  if (appSession && request.headers.origin !== undefined) {
+    throw new ApiError(400, "VALIDATION_FAILED", "App sessions can't be started from a browser.");
+  }
+}
+
+/** Input: an account response and an app's token (or null). Output: the response, with the token if there is one. */
+function withSessionToken(response: AccountResponse, sessionToken: string | null): AccountResponse {
+  return sessionToken ? { ...response, sessionToken } : response;
 }
