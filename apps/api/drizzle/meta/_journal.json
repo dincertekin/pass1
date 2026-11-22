@@ -43,6 +43,13 @@
       "when": 1795351526068,
       "tag": "0005_app_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795351933521,
+      "tag": "0006_shared_limits",
+      "breakpoints": true
     }
   ]
 }

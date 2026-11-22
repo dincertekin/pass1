@@ -1,9 +1,8 @@
 import type { ThrottleRule } from "./auth/login-throttle.js";
 import type { Config } from "./config.js";
 
-// Every rate limit in one place. Limits are per IP address and kept in memory, which is
-// right for a single server. With several servers behind a load balancer, they'd need a
-// shared store (Redis) to stay accurate.
+// Every rate limit in one place. Limits are per IP address, counted in Postgres so several API
+// servers share them (rate-limit-store.ts).
 
 const ONE_MINUTE = 60 * 1000;
 

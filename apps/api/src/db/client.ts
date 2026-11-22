@@ -17,6 +17,8 @@ import * as schema from "./schema.js";
 
 // Relative to the working directory, which is apps/api for every npm script and in Docker.
 const MIGRATIONS_FOLDER = resolve("drizzle");
+// Any fixed number works, as long as nothing else uses it for an advisory lock. Chosen at random.
+const MIGRATION_LOCK_ID = 734_190_522;
 
 /** Both drivers share the same query API, so the rest of the code only sees this. */
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
@@ -29,9 +31,8 @@ export interface Database {
 export async function openDatabase(url: string): Promise<Database> {
   if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
     const pool = new pg.Pool({ connectionString: url, max: 10 });
+    await migrateOneServerAtATime(pool);
     const db = drizzlePg(pool, { schema });
-    // Fine with one API instance. With several, run migrations as a separate deploy step.
-    await migratePg(db, { migrationsFolder: MIGRATIONS_FOLDER });
     return { db: db as unknown as Db, close: () => pool.end() };
   }
 
@@ -55,4 +56,21 @@ export async function openDatabase(url: string): Promise<Database> {
   }
 
   throw new Error(`DATABASE_URL must start with postgres://, postgresql:// or pglite: (got "${url.split(":")[0]}:...")`);
+}
+
+/**
+ * Applies pending migrations while holding a Postgres advisory lock. When several API servers
+ * start at once, the others wait, then find nothing left to do. Without the lock they ran the
+ * same migrations side by side and all but one crashed at startup (db.test.ts reproduces it).
+ * The lock belongs to this one connection, and is released even if a migration fails.
+ */
+async function migrateOneServerAtATime(pool: pg.Pool) {
+  const connection = await pool.connect();
+  try {
+    await connection.query("select pg_advisory_lock($1)", [MIGRATION_LOCK_ID]);
+    await migratePg(drizzlePg(connection, { schema }), { migrationsFolder: MIGRATIONS_FOLDER });
+  } finally {
+    await connection.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK_ID]).catch(() => {});
+    connection.release();
+  }
 }

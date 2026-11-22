@@ -66,11 +66,11 @@ The API was built for one browser on one origin. Native apps have no origin and 
 - [x] **A minimum supported app version.** Old mobile apps stay installed for years. The API must be able to say "please update" before a crypto or API change breaks them.
 - [x] **API versioning.** Decided: `/api` is version 1, and apps identify themselves with a `Pass1-Client: ios/1.4.0` header. Below the minimum in `packages/shared/src/app-versions.ts`, the server answers 426 and the app asks to be updated. A breaking change goes to `/api/v2/` while `/api` keeps serving older apps. Renaming every path to `/api/v1/` now, with the web as the only client, would be churn for nothing.
 - [x] Rate limits and the login throttle apply to apps exactly as to the web (per IP, and per account for logins).
-- [ ] **Able to run on more than one server.** Cheap to do now, painful to do during an outage:
-  - Rate limits and the login block move from memory into Postgres (accepted risk C). Postgres first, because it's already there and backed up. Redis only if load tests show Postgres can't keep up.
-  - Migrations become a separate deploy step instead of running when each app starts (`apps/api/src/db/client.ts` already warns about this).
-  - The hourly session cleanup takes a Postgres advisory lock, so only one server runs it.
-  - Nothing else kept in a server's memory between requests. A test starts two API instances on one database and checks that the login block holds across both.
+- [x] **Able to run on more than one server.** Cheap to do now, painful to do during an outage:
+  - Rate limits and the login block live in Postgres (accepted risk C), with IPs and emails stored only as keyed hashes. Postgres, not Redis: it's already there and backed up.
+  - Migrations take a Postgres advisory lock, so servers starting together migrate one at a time. Without it, a test showed all but one crashing at startup. A separate deploy step wasn't needed.
+  - The hourly cleanup runs on every server without a lock: deleting expired rows gives the same result however many servers do it.
+  - Nothing else is kept in a server's memory between requests. Tests run two API servers on one database and check that the login block and rate limits hold across both.
 
 **Done when:** an API test signs in with a token, syncs and signs out, a cookie request without a matching Origin is still refused, and two API instances behind one address pass the API test suite.
 

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { emptyTestDatabase } from "../test-helpers.js";
+import pg from "pg";
+import { emptyTestDatabase, TEST_DATABASE_URL } from "../test-helpers.js";
 import { openDatabase, type Db } from "./client.js";
 import { sessions, users } from "./schema.js";
 
@@ -51,5 +52,27 @@ describe("database", () => {
 describe("openDatabase", () => {
   it("refuses an unknown DATABASE_URL instead of guessing", async () => {
     await expect(openDatabase("mysql://localhost/pass1")).rejects.toThrow(/must start with postgres/);
+  });
+});
+
+// Two API servers starting at the same moment on a database that still needs migrating. Only
+// meaningful on a real Postgres server (CI sets TEST_DATABASE_URL); PGlite runs one query at a time.
+describe.skipIf(!TEST_DATABASE_URL.startsWith("postgres"))("Several servers starting at once", () => {
+  it("migrate one after the other instead of tripping over each other", async () => {
+    const admin = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await admin.connect();
+    const name = `pass1_migration_race_${Date.now()}`;
+    await admin.query(`create database ${name}`);
+    const url = new URL(TEST_DATABASE_URL);
+    url.pathname = `/${name}`;
+    try {
+      const results = await Promise.allSettled([openDatabase(url.href), openDatabase(url.href), openDatabase(url.href)]);
+      for (const result of results) if (result.status === "fulfilled") await result.value.close();
+      const failures = results.flatMap((result) => (result.status === "rejected" ? [String(result.reason)] : []));
+      expect(failures).toEqual([]);
+    } finally {
+      await admin.query(`drop database ${name} with (force)`);
+      await admin.end();
+    }
   });
 });

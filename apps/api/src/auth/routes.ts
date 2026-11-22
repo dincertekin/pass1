@@ -17,6 +17,7 @@ import type { RouteDeps } from "../app.js";
 import { users, type User } from "../db/schema.js";
 import { ApiError, parseBody } from "../errors.js";
 import { loginFailureRule, rateLimits } from "../rate-limits.js";
+import { createPrivacyHash } from "../privacy-hash.js";
 import { LoginThrottle } from "./login-throttle.js";
 import { hashAuthKey, verifyAgainstDummy, verifyAuthKey } from "./password.js";
 import { checkProofOfWork, createChallenge, PROOF_OF_WORK_RESULT, type ProofOfWorkResult } from "./proof-of-work.js";
@@ -30,7 +31,7 @@ const DEFAULT_KDF_PARAMS = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1
 export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
   const { db, config } = deps;
   const limits = rateLimits(config);
-  const throttle = new LoginThrottle(loginFailureRule(config));
+  const throttle = new LoginThrottle(db, loginFailureRule(config), createPrivacyHash(config));
 
   /**
    * Step 1 of login: the browser needs the user's salt and KDF settings before it can derive
@@ -116,7 +117,7 @@ export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
     refuseAppSessionFromBrowser(request, appSession);
 
     // Checked before anything else, and for unknown emails too (see auth/login-throttle.ts).
-    const wait = throttle.retryAfter(email);
+    const wait = await throttle.retryAfter(email);
     if (wait > 0) {
       const minutes = Math.ceil(wait / 60_000);
       reply.header("retry-after", Math.ceil(wait / 1000));
@@ -126,15 +127,15 @@ export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
     const user = await findUserByEmail(email);
     if (!user) {
       await verifyAgainstDummy(authKey);
-      throttle.recordFailure(email);
+      await throttle.recordFailure(email);
       throw invalidCredentials();
     }
     if (!(await verifyAuthKey(user.authHash, authKey))) {
-      throttle.recordFailure(email);
+      await throttle.recordFailure(email);
       throw invalidCredentials();
     }
 
-    throttle.recordSuccess(email);
+    await throttle.recordSuccess(email);
     const sessionToken = await startSession(db, config, request, reply, user.id, appSession);
     return withSessionToken(toAccountResponse(user), sessionToken);
   });

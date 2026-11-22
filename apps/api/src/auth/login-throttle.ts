@@ -14,50 +14,63 @@
 // like. The block caps guesses at a fixed number, however much computing power is behind them.
 //
 // Unknown emails are counted the same way, so the block can't reveal which accounts exist.
-// Counts live in memory: fine for one server; several servers would need a shared store.
+// Counts live in Postgres, so every API server sees the same ones, and emails are stored only
+// as keyed hashes (privacy-hash.ts).
+
+import { eq, lt, sql } from "drizzle-orm";
+import type { Db } from "../db/client.js";
+import { loginFailures } from "../db/schema.js";
+import type { PrivacyHash } from "../privacy-hash.js";
 
 export interface ThrottleRule {
   maxFailures: number;
   windowMs: number;
 }
 
-/** Most emails tracked at once, so someone spraying random emails can't exhaust memory. */
-const MAX_TRACKED = 100_000;
-
 export class LoginThrottle {
-  private failures = new Map<string, { count: number; since: number }>();
+  constructor(
+    private db: Db,
+    private rule: ThrottleRule,
+    private hash: PrivacyHash,
+  ) {}
 
-  constructor(private rule: ThrottleRule) {}
-
-  /** Milliseconds until `email` may try again, or 0 when it isn't blocked. */
-  retryAfter(email: string, now = Date.now()): number {
-    const entry = this.failures.get(email);
-    if (!entry || now - entry.since >= this.rule.windowMs) return 0;
-    return entry.count >= this.rule.maxFailures ? entry.since + this.rule.windowMs - now : 0;
+  /** Input: an email and the time. Output: milliseconds until it may try again, or 0 when it isn't blocked. */
+  async retryAfter(email: string, nowMs = Date.now()): Promise<number> {
+    const [row] = await this.db.select().from(loginFailures).where(eq(loginFailures.emailHash, this.hash("email", email)));
+    if (!row || nowMs - row.since.getTime() >= this.rule.windowMs) return 0;
+    return row.count >= this.rule.maxFailures ? row.since.getTime() + this.rule.windowMs - nowMs : 0;
   }
 
-  recordFailure(email: string, now = Date.now()) {
-    const entry = this.failures.get(email);
-    if (!entry || now - entry.since >= this.rule.windowMs) {
-      this.makeRoom(now);
-      this.failures.set(email, { count: 1, since: now });
-    } else {
-      entry.count++;
-    }
+  /**
+   * Counts one failed login. One statement, so two servers counting at once can't lose a failure:
+   * a window that has ended starts again at 1, otherwise the count goes up by one.
+   */
+  async recordFailure(email: string, nowMs = Date.now()): Promise<void> {
+    const now = new Date(nowMs);
+    const windowStart = new Date(nowMs - this.rule.windowMs);
+    const isStale = sql`${loginFailures.since} <= ${windowStart.toISOString()}::timestamptz`;
+    await this.db
+      .insert(loginFailures)
+      .values({ emailHash: this.hash("email", email), count: 1, since: now })
+      .onConflictDoUpdate({
+        target: loginFailures.emailHash,
+        set: {
+          count: sql`case when ${isStale} then 1 else ${loginFailures.count} + 1 end`,
+          since: sql`case when ${isStale} then ${now.toISOString()}::timestamptz else ${loginFailures.since} end`,
+        },
+      });
   }
 
-  recordSuccess(email: string) {
-    this.failures.delete(email);
+  async recordSuccess(email: string): Promise<void> {
+    await this.db.delete(loginFailures).where(eq(loginFailures.emailHash, this.hash("email", email)));
   }
+}
 
-  /** Drops expired entries; if still full, drops the oldest (a Map keeps insertion order). */
-  private makeRoom(now: number) {
-    if (this.failures.size < MAX_TRACKED) return;
-    for (const [email, entry] of this.failures) {
-      if (now - entry.since >= this.rule.windowMs) this.failures.delete(email);
-    }
-    while (this.failures.size >= MAX_TRACKED) {
-      this.failures.delete(this.failures.keys().next().value!);
-    }
-  }
+/** Deletes counts whose window has ended. server.ts runs this once an hour. Output: how many. */
+export async function deleteStaleLoginFailures(db: Db, rule: ThrottleRule, nowMs = Date.now()): Promise<number> {
+  const deleted = await db
+    .delete(loginFailures)
+    .where(lt(loginFailures.since, new Date(nowMs - rule.windowMs)))
+    .returning({ emailHash: loginFailures.emailHash });
+  return deleted.length;
 }

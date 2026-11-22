@@ -14,6 +14,8 @@ import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
 import { createEmailSender, type SendEmail } from "./email.js";
 import { ApiError, errorBody, registerErrorHandler } from "./errors.js";
+import { createPrivacyHash } from "./privacy-hash.js";
+import { createPostgresRateLimitStore } from "./rate-limit-store.js";
 import { registerSecurityHeaders } from "./security-headers.js";
 import { vaultRoutes } from "./vault/routes.js";
 import { isAppPageRequest, sendAppPage, serveWebApp } from "./web-app.js";
@@ -62,8 +64,9 @@ export async function buildApp(appDeps: AppDeps) {
   registerErrorHandler(app);
   await registerSecurityHeaders(app);
   await app.register(cookie);
-  // Off by default; each route opts in with its own limit (see auth/routes.ts).
-  await app.register(rateLimit, { global: false });
+  // Off by default; each route opts in with its own limit (see auth/routes.ts). Counts are kept
+  // in Postgres, so several API servers share them.
+  await app.register(rateLimit, { global: false, store: createPostgresRateLimitStore(appDeps.db, createPrivacyHash(config)) });
   registerAppVersionCheck(app, appDeps.minAppVersions ?? MIN_SUPPORTED_APP_VERSION);
 
   // Second line of defense against cross-site requests (CSRF), after SameSite=Strict cookies.

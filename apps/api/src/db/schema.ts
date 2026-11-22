@@ -180,6 +180,26 @@ export const signupRequests = pgTable(
   (table) => [index("signup_requests_email_idx").on(table.email, table.createdAt)],
 );
 
+/**
+ * Failed logins per account, shared by every API server (see auth/login-throttle.ts).
+ * The email is stored only as a keyed hash (privacy-hash.ts). Rows go after the window ends.
+ */
+export const loginFailures = pgTable("login_failures", {
+  emailHash: text("email_hash").primaryKey(),
+  count: integer("count").notNull(),
+  since: timestamp("since", { withTimezone: true }).notNull(),
+});
+
+/**
+ * Requests per IP and route, for rate limits shared by every API server (see rate-limit-store.ts).
+ * The key holds the route and a keyed hash of the IP, never the IP itself.
+ */
+export const rateLimitCounters = pgTable("rate_limit_counters", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  windowEndsAt: timestamp("window_ends_at", { withTimezone: true }).notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type VaultItemRow = typeof vaultItems.$inferSelect;

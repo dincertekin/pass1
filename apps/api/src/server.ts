@@ -3,7 +3,10 @@ import { loadConfig } from "./config.js";
 import { deleteExpiredChallenges } from "./auth/proof-of-work.js";
 import { deleteExpiredSessions } from "./auth/sessions.js";
 import { deleteExpiredSignupRequests } from "./auth/signup.js";
+import { deleteStaleLoginFailures } from "./auth/login-throttle.js";
 import { openDatabase } from "./db/client.js";
+import { deleteEndedRateLimitWindows } from "./rate-limit-store.js";
+import { loginFailureRule } from "./rate-limits.js";
 
 const config = loadConfig();
 const { db, close } = await openDatabase(config.DATABASE_URL);
@@ -14,22 +17,24 @@ app.listen({ port: config.PORT, host: config.HOST }).catch((err) => {
   process.exit(1);
 });
 
-// Expired sessions, sign-up puzzles and sign-up requests are useless; remove them once an hour.
-// unref() lets the process exit anyway.
+// Rows that have expired are useless; remove them once an hour. Every API server runs this, which
+// is safe without coordination: deleting what has already expired gives the same result however
+// many servers do it. unref() lets the process exit anyway.
 const ONE_HOUR = 60 * 60 * 1000;
+const CLEANUP_JOBS: [what: string, run: () => Promise<number>][] = [
+  ["expired sessions", () => deleteExpiredSessions(db)],
+  ["expired sign-up challenges", () => deleteExpiredChallenges(db)],
+  ["expired sign-up requests", () => deleteExpiredSignupRequests(db)],
+  ["stale login failure counts", () => deleteStaleLoginFailures(db, loginFailureRule(config))],
+  ["ended rate limit windows", () => deleteEndedRateLimitWindows(db)],
+];
 setInterval(() => {
-  deleteExpiredSessions(db).then(
-    (count) => count > 0 && app.log.info({ count }, "deleted expired sessions"),
-    (err) => app.log.error(err, "deleting expired sessions failed"),
-  );
-  deleteExpiredChallenges(db).then(
-    (count) => count > 0 && app.log.info({ count }, "deleted expired sign-up challenges"),
-    (err) => app.log.error(err, "deleting expired sign-up challenges failed"),
-  );
-  deleteExpiredSignupRequests(db).then(
-    (count) => count > 0 && app.log.info({ count }, "deleted expired sign-up requests"),
-    (err) => app.log.error(err, "deleting expired sign-up requests failed"),
-  );
+  for (const [what, run] of CLEANUP_JOBS) {
+    run().then(
+      (count) => count > 0 && app.log.info({ count }, `deleted ${what}`),
+      (err) => app.log.error(err, `deleting ${what} failed`),
+    );
+  }
 }, ONE_HOUR).unref();
 
 // Docker sends SIGTERM on stop: finish in-flight requests, then close the database cleanly.

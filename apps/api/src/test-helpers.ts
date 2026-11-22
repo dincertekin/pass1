@@ -17,7 +17,7 @@ let shared: Database | null = null;
 
 export async function emptyTestDatabase(): Promise<Db> {
   shared ??= await openDatabase(TEST_DATABASE_URL);
-  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, used_challenges, signup_requests, subscriptions, billing_checkouts, webhook_events cascade`);
+  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, used_challenges, signup_requests, login_failures, rate_limit_counters, subscriptions, billing_checkouts, webhook_events cascade`);
   return shared.db;
 }
 
