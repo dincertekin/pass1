@@ -5,3 +5,4 @@ export { findReused, hasIssue, healthScoreKey, strengthFromScore, type ItemHealt
 export { ImportFileError, itemsFromBitwardenJson, itemsFromCsv, itemsFromFile } from "./importers/import-file";
 export { fetchChangesSince, mergeSyncedEntries, type VaultChanges } from "./sync";
 export { TILE_COLORS, tileColor, type TileColor } from "./tiles";
+export { COLORS, FONTS, RADII_PX, TILE_COLOR_VALUES, type ThemedColor } from "./design-tokens";

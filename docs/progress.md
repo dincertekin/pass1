@@ -6,6 +6,7 @@ Everything below is done and tested. What's next is in the [roadmap](../README.m
 - [x] Crypto: Argon2id, HKDF, a wrapped random vault key, AES-256-GCM items
 - [x] Crypto runs on a provider interface (Web Crypto and hash-wasm in browsers), and any provider must pass a conformance suite of published and cross-checked known answers before it can open a vault
 - [x] Versioned crypto format v1: item ID bound as associated data, items padded to 256-byte buckets, a pinned test vector
+- [x] Design tokens (colors, fonts, radii) in `@pass1/core`; the web's CSS is generated from them
 - [x] `@pass1/core`: the API client, sync, search, password health and importers, with no browser or React code (a test checks), ready for a phone app
 - [x] Shared zod schemas for every request and response, used by the API and the web app
 - [x] Postgres with Drizzle migrations; PGlite (Postgres in WebAssembly) in development and tests, and CI also runs the API tests on Postgres 18

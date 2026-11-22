@@ -1,5 +1,7 @@
 /*
- * pass1 design tokens. This file is the single source of truth for colors, fonts and radii.
+ * pass1 design tokens for the web. Generated from packages/core/src/design-tokens.ts by
+ * src/styles/tokens.test.ts. Don't edit this file: change the tokens there and run
+ * `npm run tokens`.
  *
  * Tailwind turns each token into utilities: --color-surface → bg-surface, text-surface, border-surface…
  * Tailwind's default palette is removed on purpose: if a color isn't here, it isn't in the design.
@@ -13,7 +15,6 @@
 @theme {
   --color-*: initial;
 
-  /* Neutrals lean slightly blue-green, toward the Prussian accent */
   --color-bg: light-dark(#f4f6f5, #0e1113);
   --color-surface: light-dark(#ffffff, #15191c);
   --color-sunken: light-dark(#ecefee, #0b0d0f);
@@ -22,15 +23,11 @@
   --color-border-strong: light-dark(#bcc3c1, #353d42);
   --color-text: light-dark(#15191c, #e5e9ea);
   --color-muted: light-dark(#5b646a, #8c969b);
-
-  /* Accent: Prussian blue */
   --color-accent: light-dark(#1e4d78, #79aadb);
   --color-accent-hover: light-dark(#173d60, #98bfe6);
   --color-accent-soft: light-dark(#e3ecf4, #17283a);
   --color-accent-line: light-dark(#c9d6e3, #24405c);
   --color-on-accent: light-dark(#ffffff, #0b1218);
-
-  /* Semantic colors: only for meaning (weak, reused, strong), never decoration */
   --color-danger: light-dark(#b42318, #f07a6c);
   --color-danger-soft: light-dark(#fbe9e7, #3a1714);
   --color-danger-line: light-dark(#efc4bd, #5c2620);
@@ -39,8 +36,6 @@
   --color-warning-line: light-dark(#e7cf9c, #574016);
   --color-success: light-dark(#2c7046, #6cc490);
   --color-success-soft: light-dark(#e5f2ea, #11291b);
-
-  /* Dims the page behind dialogs; shadows */
   --color-scrim: light-dark(rgb(16 24 28 / 0.35), rgb(0 0 0 / 0.6));
   --color-shadow: light-dark(rgb(16 24 28 / 0.1), rgb(0 0 0 / 0.5));
 
@@ -57,8 +52,8 @@
 }
 
 /*
- * Item tiles: muted pairs, picked from the item's name (see vault/tiles.ts). They're used from
- * inline styles, not utility classes, so `static` tells Tailwind to always include them.
+ * Item tiles (see vault/tiles.ts). They're used from inline styles, not utility classes,
+ * so `static` tells Tailwind to always include them.
  */
 @theme static {
   --color-tile-blue: light-dark(#1e4d78, #9cc0e6);
