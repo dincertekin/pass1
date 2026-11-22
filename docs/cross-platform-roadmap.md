@@ -49,11 +49,12 @@ Mobile apps can't use code that touches `window`, `document` or `crypto.subtle` 
 - [x] **A conformance test suite** that runs the pinned test vector, and a few hundred random round trips, against *any* provider. Every platform must pass it before it touches a real vault. This is the most important test in the whole plan: a provider that encrypts slightly differently breaks vaults across devices.
 - [x] **`packages/core`** for logic with no browser in it: vault entries and search, password health, importers (Chrome, Bitwarden, 1Password...), sync, the API client. The generator stays in `@pass1/crypto` and plan limits in `@pass1/shared`, which every app can already use.
 - [x] The web app uses the new packages, and its tests still pass unchanged.
-- [ ] **Translations.** Every UI string is hard-coded English today. Move them into one message file per language, shared by web, desktop and mobile, before there are three apps to change. Dates and numbers through `Intl`, so no library is needed.
 - [x] **Design tokens shared by every app.** Colors, fonts and corner radii live in `packages/core/src/design-tokens.ts` as plain values, so the phone app and the web app look like the same product. The web's `tokens.css` is generated from them (`npm run tokens`), and a test fails if it's out of date. Spacing follows Tailwind's scale on the web; the phone app can reuse the same numbers.
 - [x] **Accessibility as a test, not a hope.** axe-core checks every main screen against WCAG 2.1 AA in the browser tests, in light and dark mode, on desktop and phone. It only runs in tests and never ships. Phase 4 adds VoiceOver and TalkBack checks.
 
-**Done when:** `apps/web` has no crypto or vault logic of its own, the conformance suite passes on Node and in the browser, and no UI string is left outside the message files.
+**Done when:** `apps/web` has no crypto or vault logic of its own, and the conformance suite passes on Node and in the browser.
+
+Translations moved to the start of Phase 4 (22 November 2026). With English as the only language, moving a few hundred strings into message files would change nothing anyone sees, and the desktop app in Phase 3 reuses the web's strings anyway. The phone app brings the second set of screens, so that's when one shared message file pays off. If a second language is wanted sooner, do it then.
 
 ### Phase 2: An API that apps can use (M)
 
@@ -93,6 +94,7 @@ The cheapest native app, because it reuses the web build.
 
 ### Phase 4: Mobile apps with React Native (L)
 
+- [ ] **Translations, first.** Every UI string goes into one message file per language in `packages/core`, shared by the web and phone apps, before the phone screens are written. Dates and numbers through `Intl`, so no library is needed. The server's error messages are shown in the app's language from their error codes.
 - [ ] **Native crypto:** a maintained native module for AES-GCM and HKDF, and a native Argon2id built from the reference C implementation. Both must pass the Phase 1 conformance suite on real iOS and Android devices. Check how fast Argon2id (64 MiB, 3 passes) runs on an old, cheap Android phone. Don't lower the settings to make it faster.
 - [ ] Screens built in React Native, using `packages/core`. Follow each platform's conventions (navigation, sheets, haptics, Dynamic Type, dark mode). This is where "feels native" comes from.
 - [ ] **Biometric unlock (optional, off by default).** The vault key is wrapped by a key kept in the Secure Enclave (iOS) or StrongBox/TEE (Android), usable only after Face ID or a fingerprint. Adding a new fingerprint or face invalidates it, so the master password is needed again. This changes the threat model: someone with your phone and your face can unlock it. Write that down before shipping.
