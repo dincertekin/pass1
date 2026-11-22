@@ -36,6 +36,17 @@ describe("Talking to the API", () => {
     expect(seen).toEqual(["Bearer app-token", null]);
   });
 
+  it("tells the server which app and version is asking, and the web doesn't", async () => {
+    const seen: (string | null)[] = [];
+    const fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      seen.push(new Headers(init?.headers).get("pass1-client"));
+      return new Response(JSON.stringify(ACCOUNT), { status: 200 });
+    }) as typeof globalThis.fetch;
+    await createApiClient({ baseUrl: "https://pass1.example.com/api", fetch, client: { platform: "ios", version: "1.4.0" } }).me();
+    await createApiClient({ baseUrl: "/api", fetch }).me();
+    expect(seen).toEqual(["ios/1.4.0", null]);
+  });
+
   it("tells the app when the server says the session is over", async () => {
     const { fetch } = fakeFetch(401, { error: { code: "UNAUTHENTICATED", message: "Log in to continue." } });
     const client = createApiClient({ baseUrl: "/api", fetch });

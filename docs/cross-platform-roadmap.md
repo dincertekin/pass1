@@ -63,8 +63,8 @@ The API was built for one browser on one origin. Native apps have no origin and 
 - [x] **Token sign-in for apps.** Apps send the session token in an `Authorization` header and keep it in the iOS Keychain or Android Keystore. The web keeps its `__Host-` cookie.
   - The Origin check exists to stop other sites using the cookie (CSRF). Keep it for every request that carries the cookie. Requests with a header token can't be forged that way, so they don't need it.
 - [x] **Device names from the app**, not from the user agent, for the sessions list. Still no IP addresses.
-- [ ] **A minimum supported app version.** Old mobile apps stay installed for years. The API must be able to say "please update" before a crypto or API change breaks them.
-- [ ] **API versioning** (`/api/v1/`), so the web and the apps can change at different speeds.
+- [x] **A minimum supported app version.** Old mobile apps stay installed for years. The API must be able to say "please update" before a crypto or API change breaks them.
+- [x] **API versioning.** Decided: `/api` is version 1, and apps identify themselves with a `Pass1-Client: ios/1.4.0` header. Below the minimum in `packages/shared/src/app-versions.ts`, the server answers 426 and the app asks to be updated. A breaking change goes to `/api/v2/` while `/api` keeps serving older apps. Renaming every path to `/api/v1/` now, with the web as the only client, would be churn for nothing.
 - [x] Rate limits and the login throttle apply to apps exactly as to the web (per IP, and per account for logins).
 - [ ] **Able to run on more than one server.** Cheap to do now, painful to do during an outage:
   - Rate limits and the login block move from memory into Postgres (accepted risk C). Postgres first, because it's already there and backed up. Redis only if load tests show Postgres can't keep up.

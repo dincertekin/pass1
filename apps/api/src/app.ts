@@ -3,6 +3,8 @@ import rateLimit from "@fastify/rate-limit";
 import { sql } from "drizzle-orm";
 import Fastify, { type FastifyInstance } from "fastify";
 import { accountRoutes } from "./account/routes.js";
+import { MIN_SUPPORTED_APP_VERSION, type AppPlatform } from "@pass1/shared";
+import { registerAppVersionCheck } from "./app-version.js";
 import { authRoutes } from "./auth/routes.js";
 import { sessionCookieName } from "./auth/sessions.js";
 import { createPaddleClient, type PaddleClient } from "./billing/paddle.js";
@@ -23,6 +25,8 @@ export interface AppDeps {
   paddle?: PaddleClient;
   /** Tests pass a fake outbox. Otherwise it's created from the config (see email.ts). */
   sendEmail?: SendEmail;
+  /** Tests raise these. Otherwise MIN_SUPPORTED_APP_VERSION from @pass1/shared. */
+  minAppVersions?: Record<AppPlatform, string>;
 }
 
 /** AppDeps after buildApp has filled in what wasn't passed. */
@@ -60,6 +64,7 @@ export async function buildApp(appDeps: AppDeps) {
   await app.register(cookie);
   // Off by default; each route opts in with its own limit (see auth/routes.ts).
   await app.register(rateLimit, { global: false });
+  registerAppVersionCheck(app, appDeps.minAppVersions ?? MIN_SUPPORTED_APP_VERSION);
 
   // Second line of defense against cross-site requests (CSRF), after SameSite=Strict cookies.
   // CSRF means another site making a visitor's browser send our cookie, so:

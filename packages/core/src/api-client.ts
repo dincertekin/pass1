@@ -1,5 +1,6 @@
 import {
   accountResponseSchema,
+  CLIENT_HEADER,
   billingStatusResponseSchema,
   challengeResponseSchema,
   checkSignupResponseSchema,
@@ -9,6 +10,7 @@ import {
   preloginResponseSchema,
   redirectResponseSchema,
   vaultItemResponseSchema,
+  type AppPlatform,
   type AppSession,
   type ChangePasswordRequest,
   type CheckoutRequest,
@@ -46,12 +48,16 @@ export interface ApiClientOptions {
    * before logging in. The web leaves this out and uses its cookie.
    */
   getSessionToken?: () => string | null;
+  /** Apps only: which app this is, so a server can ask outdated ones to update. The web leaves it out. */
+  client?: { platform: AppPlatform; version: string };
 }
 
 interface RequestContext {
   baseUrl: string;
   fetch: typeof fetch;
   getSessionToken: () => string | null;
+  /** The Pass1-Client header's value, e.g. "ios/1.4.0", or null for the web. */
+  clientHeader: string | null;
   /** Called when the server says the session is gone (see setSessionEndedHandler). */
   onSessionEnded: () => void;
 }
@@ -61,6 +67,7 @@ async function sendRequest<T>(context: RequestContext, method: string, path: str
   if (body !== undefined) headers["content-type"] = "application/json";
   const sessionToken = context.getSessionToken();
   if (sessionToken) headers.authorization = `Bearer ${sessionToken}`;
+  if (context.clientHeader) headers[CLIENT_HEADER] = context.clientHeader;
 
   let res: Response;
   try {
@@ -95,8 +102,9 @@ async function sendRequest<T>(context: RequestContext, method: string, path: str
  */
 // The default fetch is wrapped: browsers throw "Illegal invocation" when their fetch is called
 // as a method of another object, which context.fetch(...) would do.
-export function createApiClient({ baseUrl, fetch: fetchImpl = (...args) => fetch(...args), getSessionToken = () => null }: ApiClientOptions) {
-  const context: RequestContext = { baseUrl, fetch: fetchImpl, getSessionToken, onSessionEnded: () => {} };
+export function createApiClient({ baseUrl, fetch: fetchImpl = (...args) => fetch(...args), getSessionToken = () => null, client }: ApiClientOptions) {
+  const clientHeader = client ? `${client.platform}/${client.version}` : null;
+  const context: RequestContext = { baseUrl, fetch: fetchImpl, getSessionToken, clientHeader, onSessionEnded: () => {} };
   const request = <T>(method: string, path: string, schema: z.ZodType<T> | null, body?: unknown) =>
     sendRequest(context, method, path, schema, body);
 

@@ -5,7 +5,9 @@ import {
   emailSchema,
   encryptedBlobSchema,
   exportFileSchema,
+  clientHeaderSchema,
   hasLeadingZeroBits,
+  isOlderVersion,
   kdfParamsSchema,
   kdfSaltSchema,
   MAX_ITEM_CIPHERTEXT_BYTES,
@@ -114,5 +116,23 @@ describe("Checking a solved sign-up puzzle", () => {
   it("refuses a hash whose first byte isn't zero", () => {
     expect(hasLeadingZeroBits(new Uint8Array([0b1000_0000, 0]), 1)).toBe(false);
     expect(hasLeadingZeroBits(new Uint8Array([0b0111_1111, 0]), 1)).toBe(true);
+  });
+});
+
+describe("Comparing app versions", () => {
+  it("compares each part as a number, so 1.10.0 is newer than 1.9.2", () => {
+    expect(isOlderVersion("1.9.2", "1.10.0")).toBe(true);
+    expect(isOlderVersion("1.10.0", "1.9.2")).toBe(false);
+    expect(isOlderVersion("2.0.0", "2.0.0")).toBe(false);
+  });
+
+  it("refuses something that isn't a version", () => {
+    expect(() => isOlderVersion("1.2", "1.0.0")).toThrow(RangeError);
+  });
+
+  it("reads the Pass1-Client header, and refuses unknown platforms", () => {
+    expect(clientHeaderSchema.parse("ios/1.4.0")).toEqual({ platform: "ios", version: "1.4.0" });
+    expect(clientHeaderSchema.safeParse("windows-phone/1.0.0").success).toBe(false);
+    expect(clientHeaderSchema.safeParse("ios/1.4").success).toBe(false);
   });
 });

@@ -15,6 +15,7 @@ export const ERROR_CODES = [
   "PROOF_OF_WORK_FAILED",
   "SIGNUP_LINK_INVALID",
   "EMAIL_NOT_SENT",
+  "APP_UPDATE_REQUIRED",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
