@@ -14,6 +14,7 @@ Everything below is done and tested. What's next is in the [roadmap](../README.m
 - [x] Keys in memory only; reloading or locking clears them, verified with Chrome heap snapshots
 - [x] Vault: create, edit, trash, restore, favorites, search, keyboard shortcuts; three panes with a resizable list, stacked on mobile
 - [x] Stale edits rejected by revision number instead of overwriting newer data
+- [x] Sign-up starts with the email and always says "check your inbox", so it never reveals who has an account; the link to choose the master password works once, for an hour
 - [x] Sign-up puzzle (proof of work) instead of a third-party CAPTCHA: solved in a Web Worker, signed by the server, one account per solution
 - [x] Sync in pages of 500 items, fetching only what changed since the last sync; the web app picks up changes from other devices when you return to the tab
 - [x] Plan limits enforced by the server (items, total bytes, size per item), with a usage meter in the sidebar

@@ -39,8 +39,9 @@ describe("POST /api/auth/login, guessed from many IPs", () => {
   }
 
   it("blocks the account after 10 failures, even from new IPs and with the right password", async () => {
-    const { app } = await createTestApp({ TRUST_PROXY: "1" });
-    const victim = await loggedInAs(app, "victim@example.com");
+    const ctx = await createTestApp({ TRUST_PROXY: "1" });
+    const { app } = ctx;
+    const victim = await loggedInAs(ctx, "victim@example.com");
 
     for (let i = 0; i < 10; i++) expect((await guessFrom(app, "victim@example.com", `198.51.100.${i}`)).statusCode).toBe(401);
 

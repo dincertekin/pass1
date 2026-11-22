@@ -13,6 +13,8 @@ export const ERROR_CODES = [
   "CONFLICT",
   "BILLING_FAILED",
   "PROOF_OF_WORK_FAILED",
+  "SIGNUP_LINK_INVALID",
+  "EMAIL_NOT_SENT",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

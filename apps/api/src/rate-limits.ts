@@ -13,7 +13,10 @@ const STRICT = {
   challenge: { max: 30, timeWindow: ONE_MINUTE },
   // Each guess also costs the attacker a full Argon2id run in the browser.
   login: { max: 10, timeWindow: ONE_MINUTE },
-  register: { max: 5, timeWindow: 60 * ONE_MINUTE },
+  // Each one sends an email. On top of this, each address gets 3 an hour (auth/signup.ts).
+  signup: { max: 5, timeWindow: 60 * ONE_MINUTE },
+  // Needs a sign-up link, so it's already limited by signup; this only caps retries.
+  register: { max: 10, timeWindow: 60 * ONE_MINUTE },
   // Changing the password and deleting the account both check the master password.
   passwordCheck: { max: 5, timeWindow: ONE_MINUTE },
 };

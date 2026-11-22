@@ -41,6 +41,12 @@ const envSchema = z
     // 19 takes about half a second on a laptop and two on a slow phone. Production refuses
     // less than 16. Tests use 1 so they don't spend seconds solving puzzles.
     PROOF_OF_WORK_BITS: z.coerce.number().int().min(1).max(28).default(19),
+    // Where sign-up emails go out, e.g. smtps://user:password@smtp.example.com:465
+    // (smtps:// encrypts from the start; smtp:// on port 587 upgrades with STARTTLS).
+    // Required in production. Unset in development, emails are printed in the server log instead.
+    SMTP_URL: z.url().refine((url) => /^smtps?:\/\//.test(url), "Must start with smtp:// or smtps://").optional(),
+    // The sender, e.g. "pass1 <hello@pass1.example.com>". Required in production.
+    EMAIL_FROM: z.string().min(3).default("pass1 <noreply@localhost>"),
 
     // Billing with Paddle (see billing/). Leave all of these unset to run without billing:
     // the app then says upgrades aren't open yet. Setting only some of them is an error.
@@ -56,6 +62,14 @@ const envSchema = z
   .refine((env) => env.NODE_ENV !== "production" || env.PRELOGIN_SECRET !== DEV_PRELOGIN_SECRET, {
     message: "PRELOGIN_SECRET must be set in production",
     path: ["PRELOGIN_SECRET"],
+  })
+  .refine((env) => env.NODE_ENV !== "production" || env.SMTP_URL, {
+    message: "SMTP_URL must be set in production: sign-up needs email",
+    path: ["SMTP_URL"],
+  })
+  .refine((env) => env.NODE_ENV !== "production" || !env.EMAIL_FROM.endsWith("@localhost>"), {
+    message: "EMAIL_FROM must be set in production",
+    path: ["EMAIL_FROM"],
   })
   .refine((env) => env.NODE_ENV !== "production" || env.PROOF_OF_WORK_BITS >= 16, {
     message: "PROOF_OF_WORK_BITS must be at least 16 in production",

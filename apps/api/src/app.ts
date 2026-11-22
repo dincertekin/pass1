@@ -9,6 +9,7 @@ import { billingRoutes, WEBHOOK_PATH } from "./billing/routes.js";
 import { billingSettings } from "./billing/settings.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
+import { createEmailSender, type SendEmail } from "./email.js";
 import { ApiError, errorBody, registerErrorHandler } from "./errors.js";
 import { registerSecurityHeaders } from "./security-headers.js";
 import { vaultRoutes } from "./vault/routes.js";
@@ -19,7 +20,12 @@ export interface AppDeps {
   db: Db;
   /** Tests pass a fake. Otherwise it's created from the config when billing is on. */
   paddle?: PaddleClient;
+  /** Tests pass a fake outbox. Otherwise it's created from the config (see email.ts). */
+  sendEmail?: SendEmail;
 }
+
+/** AppDeps after buildApp has filled in what wasn't passed. */
+export type RouteDeps = AppDeps & { sendEmail: SendEmail };
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -27,7 +33,7 @@ export async function buildApp(appDeps: AppDeps) {
   const { config } = appDeps;
   // One Paddle client for every route that needs it, when billing is on.
   const settings = billingSettings(config);
-  const deps: AppDeps = { ...appDeps, paddle: appDeps.paddle ?? (settings ? createPaddleClient(settings) : undefined) };
+  const paddle = appDeps.paddle ?? (settings ? createPaddleClient(settings) : undefined);
 
   const app = Fastify({
     // The largest request is one encrypted item (64 KiB as base64) plus JSON around it.
@@ -45,6 +51,8 @@ export async function buildApp(appDeps: AppDeps) {
             },
           },
   });
+
+  const deps: RouteDeps = { ...appDeps, paddle, sendEmail: appDeps.sendEmail ?? createEmailSender(config, app.log) };
 
   registerErrorHandler(app);
   await registerSecurityHeaders(app);

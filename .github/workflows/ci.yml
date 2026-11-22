@@ -51,6 +51,11 @@ jobs:
   # zero CSP violations, and the heap check that a locked vault holds no keys.
   e2e:
     runs-on: ubuntu-latest
+    # Catches the sign-up emails the tests open (apps/e2e/tests/mailpit.ts).
+    services:
+      mailpit:
+        image: axllent/mailpit:v1.34.0
+        ports: ["1025:1025", "8025:8025"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -47,7 +47,7 @@ let clock: number;
 beforeEach(async () => {
   paddle = fakePaddle();
   ctx = await createTestApp(BILLING_ENV, { paddle });
-  ada = await loggedInAs(ctx.app);
+  ada = await loggedInAs(ctx);
   clock = Date.parse("2026-10-01T10:00:00Z");
 });
 
@@ -264,8 +264,9 @@ describe("deleting an account", () => {
 
 describe("without billing configured", () => {
   it("says so, and refuses checkouts and webhooks", async () => {
-    const { app } = await createTestApp();
-    const eve = await loggedInAs(app, "eve@example.com");
+    const other = await createTestApp();
+    const { app } = other;
+    const eve = await loggedInAs(other, "eve@example.com");
     expect((await eve.send("GET", "/api/billing")).json()).toEqual({ enabled: false, subscription: null });
     expect((await eve.send("POST", "/api/billing/checkout", { plan: "plus", interval: "year" })).statusCode).toBe(404);
   });

@@ -8,7 +8,13 @@ describe("loadConfig", () => {
     expect(config.HOST).toBe("127.0.0.1");
   });
 
-  const PROD = { NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32), DATABASE_URL: "postgres://pass1@db/pass1" };
+  const PROD = {
+    NODE_ENV: "production",
+    PRELOGIN_SECRET: "x".repeat(32),
+    DATABASE_URL: "postgres://pass1@db/pass1",
+    SMTP_URL: "smtps://pass1:secret@smtp.example.com:465",
+    EMAIL_FROM: "pass1 <hello@pass1.example.com>",
+  };
 
   it("refuses to start in production without a prelogin secret", () => {
     expect(() => loadConfig({ ...PROD, PRELOGIN_SECRET: undefined })).toThrow(/PRELOGIN_SECRET must be set in production/);
@@ -21,6 +27,12 @@ describe("loadConfig", () => {
   it("treats empty settings as unset, the way Docker Compose passes them", () => {
     const empty = Object.fromEntries(["PADDLE_API_KEY", "PADDLE_WEBHOOK_SECRET", "PADDLE_PRICE_PLUS_YEARLY"].map((key) => [key, ""]));
     expect(loadConfig({ ...PROD, ...empty }).PADDLE_API_KEY).toBeUndefined();
+  });
+
+  it("refuses to start in production without a way to send email", () => {
+    expect(() => loadConfig({ ...PROD, SMTP_URL: undefined })).toThrow(/SMTP_URL must be set in production/);
+    expect(() => loadConfig({ ...PROD, EMAIL_FROM: undefined })).toThrow(/EMAIL_FROM must be set in production/);
+    expect(() => loadConfig({ ...PROD, SMTP_URL: "https://smtp.example.com" })).toThrow(/smtp:\/\/ or smtps:\/\//);
   });
 
   it("refuses an easy sign-up puzzle in production", () => {
@@ -64,7 +76,14 @@ describe("billing settings", () => {
   });
 
   it("must use Paddle's production environment in production", () => {
-    const prod = { NODE_ENV: "production", PRELOGIN_SECRET: "x".repeat(32), DATABASE_URL: "postgres://db/pass1", ...ALL };
+    const prod = {
+      NODE_ENV: "production",
+      PRELOGIN_SECRET: "x".repeat(32),
+      DATABASE_URL: "postgres://db/pass1",
+      SMTP_URL: "smtps://pass1:secret@smtp.example.com:465",
+      EMAIL_FROM: "pass1 <hello@pass1.example.com>",
+      ...ALL,
+    };
     expect(() => loadConfig(prod)).toThrow(/PADDLE_ENVIRONMENT must be production/);
     expect(() => loadConfig({ ...prod, PADDLE_ENVIRONMENT: "production" })).not.toThrow();
   });

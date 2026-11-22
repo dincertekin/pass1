@@ -29,6 +29,13 @@
       "when": 1795302085826,
       "tag": "0003_used_challenges",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795304583903,
+      "tag": "0004_signup_requests",
+      "breakpoints": true
     }
   ]
 }

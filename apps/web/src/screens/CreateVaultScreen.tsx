@@ -9,9 +9,12 @@ import { MIN_MASTER_PASSWORD_SCORE, usePasswordStrength } from "../lib/password-
 import { errorMessage, useSession } from "../session/session";
 import { SlowOnPurpose } from "./LoginScreen";
 
-export function RegisterScreen() {
+/**
+ * Step 2 of creating an account, opened from the emailed link: choose the master password.
+ * `email` comes from the link (checked with the server), so it can't be changed here.
+ */
+export function CreateVaultScreen({ signupToken, email }: { signupToken: string; email: string }) {
   const { register } = useSession();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [understood, setUnderstood] = useState(false);
@@ -29,7 +32,7 @@ export function RegisterScreen() {
     setBusy(true);
     setError(null);
     try {
-      await register(email, password);
+      await register(signupToken, password);
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
@@ -54,10 +57,10 @@ export function RegisterScreen() {
         <TextField
           label="Email"
           type="email"
+          // Lets the browser save the new password together with this email.
           autoComplete="username"
-          required
+          readOnly
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
         />
         <PasswordField
           label="Master password"

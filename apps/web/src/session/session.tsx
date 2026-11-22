@@ -11,7 +11,6 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { api, ApiRequestError, setSessionEndedHandler } from "../lib/api";
 import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
-import { solveSignUpPuzzle } from "../lib/proof-of-work";
 
 // Who is logged in, and whether the vault is open.
 //
@@ -26,7 +25,8 @@ export type Session =
   | { status: "unlocked"; account: AccountResponse; vaultKey: CryptoKey };
 
 interface SessionActions {
-  register(email: string, masterPassword: string): Promise<void>;
+  /** Creates the account from an emailed sign-up link's token. */
+  register(signupToken: string, masterPassword: string): Promise<void>;
   logIn(email: string, masterPassword: string): Promise<void>;
   unlock(masterPassword: string): Promise<void>;
   lock(): void;
@@ -67,15 +67,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const actions: SessionActions = {
-    async register(email, masterPassword) {
+    async register(signupToken, masterPassword) {
       const kdfSalt = generateSalt();
-      // Both are slow on purpose and run in their own workers, so side by side they cost one wait.
-      const [{ authKey, encryptionKey }, proofOfWork] = await Promise.all([
-        deriveKeysInWorker(masterPassword, kdfSalt, DEFAULT_KDF_PARAMS),
-        solveSignUpPuzzle(),
-      ]);
+      const { authKey, encryptionKey } = await deriveKeysInWorker(masterPassword, kdfSalt, DEFAULT_KDF_PARAMS);
       const { vaultKey, wrappedVaultKey } = await createVaultKey(encryptionKey);
-      const account = await api.register({ email, authKey, kdfSalt, kdfParams: DEFAULT_KDF_PARAMS, wrappedVaultKey, proofOfWork });
+      const account = await api.register({ signupToken, authKey, kdfSalt, kdfParams: DEFAULT_KDF_PARAMS, wrappedVaultKey });
       setSession({ status: "unlocked", account, vaultKey });
     },
 

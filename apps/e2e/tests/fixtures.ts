@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
+import { signupLinkIn, waitForEmailTo } from "./mailpit";
 
 // Shared setup for every test.
 //
@@ -29,11 +30,28 @@ export const test = base.extend<{ page: Page }>({
 
 export { expect };
 
-/** Registers a fresh account and waits for the empty vault. Returns its email. */
-export async function registerNewAccount(page: Page, password = MASTER_PASSWORD): Promise<string> {
-  const email = `e2e-${crypto.randomUUID()}@example.com`;
+/** Asks for a sign-up email, like a person on the sign-up page. */
+export async function requestSignupEmail(page: Page, email: string) {
   await page.goto("/register");
   await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
+}
+
+/** Signs up a new email and opens the emailed link. Returns the email and the link. */
+export async function openSignupLink(page: Page): Promise<{ email: string; link: string }> {
+  const email = `e2e-${crypto.randomUUID()}@example.com`;
+  await requestSignupEmail(page, email);
+  const link = signupLinkIn((await waitForEmailTo(email)).text);
+  if (!link) throw new Error(`The email to ${email} had no sign-up link`);
+  await page.goto(link);
+  await expect(page.getByLabel("Email")).toHaveValue(email);
+  return { email, link };
+}
+
+/** Signs up through the emailed link and waits for the empty vault. Returns its email. */
+export async function registerNewAccount(page: Page, password = MASTER_PASSWORD): Promise<string> {
+  const { email } = await openSignupLink(page);
   await page.getByLabel("Master password", { exact: true }).fill(password);
   await expect(page.getByText("Strong")).toBeVisible();
   await page.getByLabel("Confirm master password").fill(password);

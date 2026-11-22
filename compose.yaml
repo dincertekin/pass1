@@ -48,6 +48,9 @@ services:
       TRUST_PROXY: "1"
       # Sign-up puzzle difficulty. See apps/api/src/config.ts.
       PROOF_OF_WORK_BITS: ${PROOF_OF_WORK_BITS:-19}
+      # Sign-up emails. Required: the app refuses to start without them.
+      SMTP_URL: ${SMTP_URL:?Set SMTP_URL in .env}
+      EMAIL_FROM: ${EMAIL_FROM:?Set EMAIL_FROM in .env}
       # Billing: all empty runs pass1 without upgrades. See docs/deploy.md, "Billing with Paddle".
       PADDLE_ENVIRONMENT: ${PADDLE_ENVIRONMENT:-sandbox}
       PADDLE_API_KEY: ${PADDLE_API_KEY:-}
@@ -98,6 +101,15 @@ services:
       - ./deploy/backup.sh:/backup.sh:ro
       - ./backups:/backups
     entrypoint: ["sh", "/backup.sh"]
+
+  # Catches sign-up emails when trying the stack on your own computer (docs/deploy.md).
+  # Only starts with --profile local, never on a real server. Read the emails at
+  # http://localhost:8025; set SMTP_URL=smtp://mailpit:1025 in .env.
+  mailpit:
+    image: axllent/mailpit:v1.34.0
+    profiles: [local]
+    ports:
+      - "127.0.0.1:8025:8025"
     depends_on:
       db:
         condition: service_healthy

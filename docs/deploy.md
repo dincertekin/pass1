@@ -16,6 +16,7 @@ The server never sees vault contents or master passwords. A stolen server or bac
 - A Linux server with 2 GB of RAM or more, with Docker Engine and the Compose plugin installed (`docker compose version` should work).
 - A domain name whose DNS `A` (and `AAAA`, for IPv6) record points at the server.
 - Ports 80 and 443 open to the internet. Caddy needs port 80 to get the certificate and to redirect to HTTPS.
+- SMTP settings from an email provider (Postmark, Amazon SES, Mailgun, Proton, or your own mail server). Creating an account starts with an email, so pass1 won't start without them. Send from a domain whose SPF and DKIM records include that provider, or sign-up emails will land in spam.
 
 ## First deploy
 
@@ -24,7 +25,7 @@ git clone <your pass1 repository> pass1 && cd pass1
 
 cp deploy/.env.example .env
 chmod 600 .env
-# Edit .env: set DOMAIN and PUBLIC_URL, and fill both secrets with:
+# Edit .env: set DOMAIN, PUBLIC_URL, SMTP_URL and EMAIL_FROM, and fill both secrets with:
 openssl rand -base64 32
 
 docker compose up -d --build
@@ -37,7 +38,7 @@ docker compose ps                        # app and db should say "(healthy)"
 curl https://<your domain>/api/health    # {"status":"ok"}
 ```
 
-Then open the site, create an account, and add an item. The database migrations run by themselves when the app starts.
+Then open the site, create an account (the link arrives by email), and add an item. The database migrations run by themselves when the app starts.
 
 > **Never change `PRELOGIN_SECRET` after launch.** It's used to answer logins for unknown emails the same way every time, so that nobody can find out which emails have accounts. Changing it changes those answers.
 
@@ -84,6 +85,8 @@ docker compose ps                       # wait for "(healthy)"
 
 Database migrations run when the new app starts. If something is wrong, check out the previous version, rebuild, and restore the backup you just took.
 
+> **Upgrading to email sign-up (November 2026):** set `SMTP_URL` and `EMAIL_FROM` in `.env` before `docker compose up`. Without them the app refuses to start. Existing accounts keep working as before; only new accounts start with an email.
+
 ## Billing with Paddle
 
 Without the Paddle settings, pass1 runs with the Free plan only, and the plans dialog says upgrades open soon. To take payments:
@@ -116,7 +119,7 @@ How it works: the server creates a Paddle transaction for the chosen price and s
 
 ## Trying it on your own computer
 
-The same stack runs locally, with a certificate Caddy makes for `localhost`. Your browser will warn about that certificate the first time.
+The same stack runs locally, with a certificate Caddy makes for `localhost`. Your browser will warn about that certificate the first time. Sign-up emails go to Mailpit, a mail catcher that only starts with `--profile local`: read them at http://localhost:8025.
 
 ```bash
 cat > .env <<'EOF'
@@ -126,10 +129,12 @@ POSTGRES_PASSWORD=local-only-password
 PRELOGIN_SECRET=local-only-prelogin-secret-at-least-32-chars
 HTTP_PORT=8080
 HTTPS_PORT=8443
+SMTP_URL=smtp://mailpit:1025
+EMAIL_FROM=pass1 <hello@localhost.test>
 EOF
 
-docker compose up -d --build
+docker compose --profile local up -d --build
 open https://localhost:8443
 ```
 
-Stop it and delete its data with `docker compose down --volumes`.
+Stop it and delete its data with `docker compose --profile local down --volumes`.

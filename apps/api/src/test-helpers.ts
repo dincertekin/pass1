@@ -1,6 +1,7 @@
 import { hasLeadingZeroBits, proofOfWorkInput, type ChallengeResponse } from "@pass1/shared";
 import { createHash, randomBytes } from "node:crypto";
 import { buildApp, type AppDeps } from "./app.js";
+import type { EmailMessage } from "./email.js";
 import { loadConfig } from "./config.js";
 import { eq, sql } from "drizzle-orm";
 import { openDatabase, type Database, type Db } from "./db/client.js";
@@ -16,8 +17,20 @@ let shared: Database | null = null;
 
 export async function emptyTestDatabase(): Promise<Db> {
   shared ??= await openDatabase(TEST_DATABASE_URL);
-  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, used_challenges, subscriptions, billing_checkouts, webhook_events cascade`);
+  await shared.db.execute(sql`truncate table users, sessions, vault_items, vault_deletions, used_challenges, signup_requests, subscriptions, billing_checkouts, webhook_events cascade`);
   return shared.db;
+}
+
+/** Emails the app "sent", newest last. Each test app gets its own. */
+export type Outbox = EmailMessage[];
+
+/**
+ * The sign-up token from the newest email to `email`, or null if that email has no link
+ * (e.g. "you already have an account").
+ */
+export function signupTokenFrom(outbox: Outbox, email: string): string | null {
+  const message = [...outbox].reverse().find((m) => m.to === email);
+  return message?.text.match(/#token=([A-Za-z0-9_-]{43})/)?.[1] ?? null;
 }
 
 /** A fresh app on an empty database. `deps` swaps in fakes, e.g. a Paddle client. */
@@ -25,8 +38,14 @@ export async function createTestApp(env: Record<string, string> = {}, deps: Part
   // One-bit puzzles: solving them takes a couple of hashes, so tests stay fast.
   const config = loadConfig({ NODE_ENV: "test", DATABASE_URL: TEST_DATABASE_URL, PROOF_OF_WORK_BITS: "1", ...env });
   const db = await emptyTestDatabase();
-  return { app: await buildApp({ config, db, ...deps }), db, config };
+  const outbox: Outbox = [];
+  const sendEmail = async (message: EmailMessage) => {
+    outbox.push(message);
+  };
+  return { app: await buildApp({ config, db, sendEmail, ...deps }), db, config, outbox };
 }
+
+type TestContext = Awaited<ReturnType<typeof createTestApp>>;
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>["app"];
 
@@ -51,21 +70,36 @@ export async function solvedProofOfWork(app: TestApp) {
   return solveChallenge(res.json());
 }
 
-/** A valid registration, sign-up puzzle included. */
-export async function registerBody(app: TestApp, email = "ada@example.com", authKey = b64(32)) {
+/** Step 1 of signing up, puzzle included. Output: the API's response. */
+export async function requestSignup(app: TestApp, email: string) {
+  const proofOfWork = await solvedProofOfWork(app);
+  return app.inject({ method: "POST", url: "/api/auth/signup", payload: { email, proofOfWork }, headers: ORIGIN });
+}
+
+/** The keys a browser would send when creating an account, with the link's token. */
+export function registerBody(signupToken: string, authKey = b64(32)) {
   return {
-    email,
+    signupToken,
     authKey,
     kdfSalt: b64(16),
     kdfParams: { memoryKiB: 65536, iterations: 3, parallelism: 1 },
     wrappedVaultKey: { v: 1, iv: b64(12), ciphertext: b64(48) },
-    proofOfWork: await solvedProofOfWork(app),
   };
 }
 
-/** Registers a user and returns a function that sends requests as them. */
-export async function loggedInAs(app: TestApp, email = "ada@example.com") {
-  const body = await registerBody(app, email);
+/** Asks for a sign-up email and returns the token from its link. */
+export async function signupTokenFor(ctx: TestContext, email = "ada@example.com"): Promise<string> {
+  const res = await requestSignup(ctx.app, email);
+  if (res.statusCode !== 202) throw new Error(`signup failed: ${res.body}`);
+  const token = signupTokenFrom(ctx.outbox, email);
+  if (!token) throw new Error(`no sign-up link was emailed to ${email}`);
+  return token;
+}
+
+/** Signs a user up through the email link and returns a function that sends requests as them. */
+export async function loggedInAs(ctx: TestContext, email = "ada@example.com") {
+  const { app } = ctx;
+  const body = registerBody(await signupTokenFor(ctx, email));
   const res = await app.inject({ method: "POST", url: "/api/auth/register", payload: body, headers: ORIGIN });
   if (res.statusCode !== 201) throw new Error(`register failed: ${res.body}`);
   const token = res.cookies.find((c) => c.name === SESSION_COOKIE)!.value;

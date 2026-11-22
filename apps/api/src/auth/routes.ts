@@ -1,15 +1,18 @@
 import {
+  checkSignupRequestSchema,
   loginRequestSchema,
   preloginRequestSchema,
   registerRequestSchema,
+  signupRequestSchema,
   type AccountResponse,
   type ChallengeResponse,
+  type CheckSignupResponse,
   type PreloginResponse,
 } from "@pass1/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { createHmac } from "node:crypto";
-import type { AppDeps } from "../app.js";
+import type { RouteDeps } from "../app.js";
 import { users, type User } from "../db/schema.js";
 import { ApiError, parseBody } from "../errors.js";
 import { loginFailureRule, rateLimits } from "../rate-limits.js";
@@ -17,12 +20,14 @@ import { LoginThrottle } from "./login-throttle.js";
 import { hashAuthKey, verifyAgainstDummy, verifyAuthKey } from "./password.js";
 import { checkProofOfWork, createChallenge, PROOF_OF_WORK_RESULT, type ProofOfWorkResult } from "./proof-of-work.js";
 import { endSession, requireUser, startSession } from "./sessions.js";
+import { findSignupEmail, requestSignup, SIGNUP_LINK_INVALID_MESSAGE, useSignupToken } from "./signup.js";
 
 // Same as DEFAULT_KDF_PARAMS in @pass1/crypto. Shown to unknown emails at prelogin,
 // so they look exactly like a freshly registered account.
 const DEFAULT_KDF_PARAMS = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 };
 
-export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
+export function authRoutes(app: FastifyInstance, deps: RouteDeps) {
+  const { db, config } = deps;
   const limits = rateLimits(config);
   const throttle = new LoginThrottle(loginFailureRule(config));
 
@@ -45,24 +50,36 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     return createChallenge(config);
   });
 
-  app.post("/auth/register", { config: { rateLimit: limits.register } }, async (request, reply) => {
-    const body = parseBody(registerRequestSchema, request.body);
-
-    // Before anything else, and before the expensive Argon2 hash below.
-    const proofResult = await checkProofOfWork(config, db, body.proofOfWork);
+  /** Step 1 of creating an account (see auth/signup.ts). Same answer for every email. */
+  app.post("/auth/signup", { config: { rateLimit: limits.signup } }, async (request, reply) => {
+    const { email, proofOfWork } = parseBody(signupRequestSchema, request.body);
+    const proofResult = await checkProofOfWork(config, db, proofOfWork);
     if (proofResult !== PROOF_OF_WORK_RESULT.OK) {
       throw new ApiError(403, "PROOF_OF_WORK_FAILED", proofOfWorkMessage(proofResult));
     }
+    await requestSignup(deps, email);
+    return reply.status(202).send();
+  });
 
-    // This does reveal that an email is registered. Email verification (Phase 8) will fix it:
-    // registering will always say "check your inbox", and the email will say what happened.
-    if (await findUserByEmail(body.email)) {
-      throw new ApiError(409, "EMAIL_TAKEN", "An account with this email already exists.");
-    }
+  /** Which email a sign-up link is for, so the page can show it before the master password is chosen. */
+  app.post("/auth/signup/check", { config: { rateLimit: limits.prelogin } }, async (request): Promise<CheckSignupResponse> => {
+    const { signupToken } = parseBody(checkSignupRequestSchema, request.body);
+    const email = await findSignupEmail(db, signupToken);
+    if (!email) throw new ApiError(400, "SIGNUP_LINK_INVALID", SIGNUP_LINK_INVALID_MESSAGE);
+    return { email };
+  });
+
+  /** Step 2: the page the sign-up link opens sends the token with the newly derived keys. */
+  app.post("/auth/register", { config: { rateLimit: limits.register } }, async (request, reply) => {
+    const body = parseBody(registerRequestSchema, request.body);
+
+    // A cheap check before the expensive Argon2 hash. The token is only used up further down.
+    const email = await findSignupEmail(db, body.signupToken);
+    if (!email) throw new ApiError(400, "SIGNUP_LINK_INVALID", SIGNUP_LINK_INVALID_MESSAGE);
 
     const user: User = {
       id: crypto.randomUUID(),
-      email: body.email,
+      email,
       authHash: await hashAuthKey(body.authKey),
       kdfSalt: body.kdfSalt,
       kdfMemoryKiB: body.kdfParams.memoryKiB,
@@ -75,10 +92,16 @@ export function authRoutes(app: FastifyInstance, { db, config }: AppDeps) {
     };
 
     try {
-      await db.insert(users).values(user);
+      await db.transaction(async (tx) => {
+        if (!(await useSignupToken(tx, body.signupToken))) {
+          throw new ApiError(400, "SIGNUP_LINK_INVALID", SIGNUP_LINK_INVALID_MESSAGE);
+        }
+        await tx.insert(users).values(user);
+      });
     } catch (err) {
-      // Two registrations for the same email at the same moment: the unique index catches the second.
-      if (isUniqueViolation(err)) throw new ApiError(409, "EMAIL_TAKEN", "An account with this email already exists.");
+      // Two links for the same email, both opened: the unique index catches the second account.
+      // Only the owner of the inbox can get here, so saying so reveals nothing new.
+      if (isUniqueViolation(err)) throw new ApiError(409, "EMAIL_TAKEN", "This email already has an account. Log in instead.");
       throw err;
     }
 
@@ -160,6 +183,6 @@ function isUniqueViolation(err: unknown): boolean {
 
 /** What the person sees when the sign-up check fails. Input: a result other than OK. */
 function proofOfWorkMessage(result: ProofOfWorkResult): string {
-  if (result === PROOF_OF_WORK_RESULT.EXPIRED) return "The sign-up check took too long. Create the account again.";
-  return "The sign-up check failed. Reload the page and create the account again.";
+  if (result === PROOF_OF_WORK_RESULT.EXPIRED) return "The sign-up check took too long. Try again.";
+  return "The sign-up check failed. Reload the page and try again.";
 }

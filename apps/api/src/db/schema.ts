@@ -154,6 +154,24 @@ export const usedChallenges = pgTable("used_challenges", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
 
+/**
+ * Every "check your inbox" email sent at sign-up, kept for an hour (see auth/signup.ts).
+ * For an email without an account, the row also holds the link's token, as a SHA-256 hash.
+ * For an email that already has an account, there's no token: that email only says so.
+ * Counting rows per email is what stops anyone using pass1 to flood someone's inbox.
+ */
+export const signupRequests = pgTable(
+  "signup_requests",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index("signup_requests_email_idx").on(table.email, table.createdAt)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type VaultItemRow = typeof vaultItems.$inferSelect;

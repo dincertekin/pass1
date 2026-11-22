@@ -18,14 +18,32 @@ export const preloginResponseSchema = z.object({
 });
 export type PreloginResponse = z.infer<typeof preloginResponseSchema>;
 
-export const registerRequestSchema = z.object({
+/**
+ * Step 1 of creating an account: POST /auth/signup. The answer is always the same,
+ * "check your inbox", whether or not the email already has an account.
+ */
+export const signupRequestSchema = z.object({
   email: emailSchema,
+  // A solved puzzle from GET /auth/challenge, so sending sign-up emails in bulk costs real computing time.
+  proofOfWork: proofOfWorkSchema,
+});
+export type SignupRequest = z.infer<typeof signupRequestSchema>;
+
+/** The token in a sign-up link: 32 random bytes as base64url. */
+export const signupTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, "Not a sign-up token");
+
+/** POST /auth/signup/check: which email a sign-up link is for, before the master password is chosen. */
+export const checkSignupRequestSchema = z.object({ signupToken: signupTokenSchema });
+export const checkSignupResponseSchema = z.object({ email: z.string() });
+export type CheckSignupResponse = z.infer<typeof checkSignupResponseSchema>;
+
+/** Step 2: POST /auth/register, from the page the sign-up link opens. The email comes from the token. */
+export const registerRequestSchema = z.object({
+  signupToken: signupTokenSchema,
   authKey: authKeySchema,
   kdfSalt: kdfSaltSchema,
   kdfParams: kdfParamsSchema,
   wrappedVaultKey: encryptedBlobSchema,
-  // A solved puzzle from GET /auth/challenge, so creating accounts in bulk costs real computing time.
-  proofOfWork: proofOfWorkSchema,
 });
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 

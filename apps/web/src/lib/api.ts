@@ -2,6 +2,7 @@ import {
   accountResponseSchema,
   billingStatusResponseSchema,
   challengeResponseSchema,
+  checkSignupResponseSchema,
   errorResponseSchema,
   listItemsResponseSchema,
   listSessionsResponseSchema,
@@ -13,6 +14,7 @@ import {
   type CreateItemRequest,
   type ErrorCode,
   type RegisterRequest,
+  type SignupRequest,
   type UpdateItemRequest,
 } from "@pass1/shared";
 import type { z } from "zod";
@@ -71,6 +73,8 @@ async function request<T>(method: string, path: string, schema: z.ZodType<T> | n
 
 export const api = {
   challenge: () => request("GET", "/auth/challenge", challengeResponseSchema),
+  signup: (body: SignupRequest) => request("POST", "/auth/signup", null, body),
+  checkSignup: (signupToken: string) => request("POST", "/auth/signup/check", checkSignupResponseSchema, { signupToken }),
   prelogin: (email: string) => request("POST", "/auth/prelogin", preloginResponseSchema, { email }),
   register: (body: RegisterRequest) => request("POST", "/auth/register", accountResponseSchema, body),
   login: (email: string, authKey: string) => request("POST", "/auth/login", accountResponseSchema, { email, authKey }),

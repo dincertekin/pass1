@@ -11,6 +11,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "tests",
+  globalSetup: "./global-setup.ts",
   // Every test registers its own account, so tests can run side by side.
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -51,6 +52,8 @@ export default defineConfig({
       // sometimes takes over 5 seconds here, and longer on CI. 12 bits still runs the whole
       // puzzle (worker, hash-wasm, CSP); the API tests check that easy puzzles are refused.
       PROOF_OF_WORK_BITS: "12",
+      // Mailpit, which catches every email so the tests can open sign-up links (tests/mailpit.ts).
+      SMTP_URL: process.env.SMTP_URL ?? "smtp://localhost:1025",
     },
   },
 });

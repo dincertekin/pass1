@@ -8,7 +8,7 @@ let ada: Awaited<ReturnType<typeof loggedInAs>>;
 
 beforeEach(async () => {
   ctx = await createTestApp();
-  ada = await loggedInAs(ctx.app);
+  ada = await loggedInAs(ctx);
 });
 
 function login(authKey: string, userAgent = "Firefox on Linux") {
@@ -93,7 +93,7 @@ describe("sessions", () => {
   });
 
   it("can't touch another user's sessions", async () => {
-    const eve = await loggedInAs(ctx.app, "eve@example.com");
+    const eve = await loggedInAs(ctx, "eve@example.com");
     const adaSession = (await ada.send("GET", "/api/account/sessions")).json().sessions[0];
     expect((await eve.send("DELETE", `/api/account/sessions/${adaSession.id}`)).statusCode).toBe(404);
     expect((await ada.send("GET", "/api/auth/me")).statusCode).toBe(200);
@@ -109,7 +109,7 @@ describe("DELETE /account", () => {
 
   it("deletes the user, their sessions and their items", async () => {
     await ada.send("POST", "/api/vault/items", { id: crypto.randomUUID(), data: { v: 1, iv: b64(12), ciphertext: b64(272) } });
-    const eve = await loggedInAs(ctx.app, "eve@example.com");
+    const eve = await loggedInAs(ctx, "eve@example.com");
 
     const res = await ada.send("DELETE", "/api/account", { authKey: ada.authKey });
     expect(res.statusCode).toBe(204);

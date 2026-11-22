@@ -10,7 +10,7 @@ let ada: Awaited<ReturnType<typeof loggedInAs>>;
 
 beforeEach(async () => {
   ctx = await createTestApp();
-  ada = await loggedInAs(ctx.app);
+  ada = await loggedInAs(ctx);
 });
 
 async function createItem(as = ada, id: string = crypto.randomUUID()) {
@@ -180,7 +180,7 @@ describe("Syncing between devices", () => {
 describe("isolation between users", () => {
   it("hides one user's items from another, as if they didn't exist", async () => {
     const item = await createItem(ada);
-    const eve = await loggedInAs(ctx.app, "eve@example.com");
+    const eve = await loggedInAs(ctx, "eve@example.com");
 
     expect((await eve.send("GET", "/api/vault/items")).json()).toMatchObject({ items: [], version: 0 });
     expect((await eve.send("PUT", `/api/vault/items/${item.id}`, { data: blob(), revision: 1 })).statusCode).toBe(404);
