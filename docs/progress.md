@@ -29,6 +29,7 @@ Everything below is done and tested. What's next is in the [roadmap](../README.m
 - [x] Active sessions list with revoke; account deletion
 - [x] Strict Content-Security-Policy (no inline scripts, no eval, Trusted Types, per-load style nonce)
 - [x] Playwright end-to-end tests, each one also failing on any CSP violation
+- [x] Every main screen checked against WCAG 2.1 AA with axe-core, in light and dark mode, on desktop and phone
 - [x] Docker image (non-root, read-only filesystem) and Compose stack: Caddy (HTTPS), app, Postgres, daily backups
 - [x] Backup and restore scripts, tested by restoring onto a fresh stack; guide in [docs/deploy.md](deploy.md)
 - [x] Health check that includes the database, JSON request logs without bodies
