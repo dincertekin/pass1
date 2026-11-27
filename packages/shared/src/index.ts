@@ -6,4 +6,5 @@ export * from "./vault";
 export * from "./account";
 export * from "./app-versions";
 export * from "./billing";
+export * from "./content-security-policy";
 export * from "./proof-of-work";

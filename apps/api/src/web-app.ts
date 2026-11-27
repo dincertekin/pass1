@@ -2,9 +2,10 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { STYLE_NONCE_PLACEHOLDER } from "@pass1/shared";
 import { styleNonces } from "./security-headers.js";
 
-const NONCE_PLACEHOLDER = "__CSP_NONCE__";
+
 let indexHtml = "";
 
 // In production the API also serves the built web app, so the whole of pass1 is one origin:
@@ -39,7 +40,7 @@ export async function serveWebApp(app: FastifyInstance, distDir: string) {
  * Never cached: the nonce is new every time, and a new deploy reaches users on the next load.
  */
 export function sendAppPage(reply: FastifyReply) {
-  const html = indexHtml.replaceAll(NONCE_PLACEHOLDER, styleNonces.get(reply.raw) ?? "");
+  const html = indexHtml.replaceAll(STYLE_NONCE_PLACEHOLDER, styleNonces.get(reply.raw) ?? "");
   return reply.header("cache-control", "no-store").type("text/html; charset=utf-8").send(html);
 }
 
