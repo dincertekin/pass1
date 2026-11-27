@@ -1,5 +1,6 @@
 // Renders the app icons from the two SVGs next to this file, and writes them in each platform's
-// format: pass1.icns (macOS), pass1.ico (Windows) and pass1.png (Linux, and the window icon).
+// format: pass1.icns (macOS), pass1.ico (Windows), pass1.png (Linux, and the window icon), and
+// pass1-macos.png (the Dock icon while developing, when there's no app bundle with the .icns).
 // Run it after changing an SVG: `npm run icons -w @pass1/desktop`, then commit the
 // results. Rendering uses Playwright's Chromium (the browser tests' own), so no image tool is
 // needed; the .icns and .ico containers are simple enough to write here.
@@ -86,4 +87,5 @@ await browser.close();
 writeFileSync(join(HERE, "pass1.ico"), icoFile(new Map(ICO_SIZES.map((size) => [size, square.get(size)]))));
 writeFileSync(join(HERE, "pass1.icns"), icnsFile(mac));
 writeFileSync(join(HERE, "pass1.png"), square.get(LINUX_SIZE));
-console.log("Wrote pass1.icns, pass1.ico and pass1.png");
+writeFileSync(join(HERE, "pass1-macos.png"), mac.get(LINUX_SIZE));
+console.log("Wrote pass1.icns, pass1.ico, pass1.png and pass1-macos.png");

@@ -14,6 +14,9 @@ import { readServerAddress } from "./server-address.js";
 const WINDOW_SIZE = { width: 1280, height: 820, minWidth: 380, minHeight: 560 };
 // Windows and Linux show this in the title bar and taskbar. macOS uses pass1.icns from the app bundle.
 const WINDOW_ICON = join(app.getAppPath(), "icons", "pass1.png");
+// Only while developing, when there's no app bundle: the macOS artwork, with Apple's margin.
+// (The Windows and Linux image fills its square, which looks too big in the Dock.)
+const DEVELOPMENT_DOCK_ICON = join(app.getAppPath(), "icons", "pass1-macos.png");
 
 // Tests give each run its own folder, so their tokens and settings never mix, and a fake
 // keychain, so they never touch the real one of whoever runs them (macOS would also stop and ask
@@ -60,7 +63,7 @@ function lockOnSleep(getWindow: () => BrowserWindow | null) {
 
 app.whenReady().then(() => {
   // During development the Dock would show Electron's own icon.
-  if (!app.isPackaged) app.dock?.setIcon(WINDOW_ICON);
+  if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   const server = readServerAddress();
   if ("error" in server) {
     dialog.showErrorBox("pass1 can't start", server.error);

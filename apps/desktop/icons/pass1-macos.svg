@@ -1,21 +1,29 @@
-<!-- pass1's app icon for macOS: the same tile on Apple's icon grid (an 824-point rounded square
-     on a 1024 canvas, with a soft shadow), so it sits right among other Mac apps. -->
+<!-- pass1's app icon for macOS, on Apple's icon grid: a 1024 canvas with an 824-point body and a
+     100-point margin, so it sits at the same size as other apps in the Dock. The body is Apple's
+     continuous-corner shape, not a plain rounded rectangle: corner radius 185.4 with 60% corner
+     smoothing (each corner eases from the straight side into the arc), with a soft shadow below. The "1" is drawn as shapes, so it looks
+     the same everywhere. make-icons.mjs renders it. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#25598a"/>
+      <stop offset="0" stop-color="#2a6296"/>
       <stop offset="1" stop-color="#1a4268"/>
     </linearGradient>
+    <!-- A faint light along the top edge, as on Apple's own icons. -->
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.3"/>
     </filter>
   </defs>
-  <g transform="translate(100 100) scale(0.8047)">
-    <rect width="1024" height="1024" rx="230" fill="url(#tile)" filter="url(#shadow)"/>
-    <g fill="#ffffff">
-      <path d="M572 236 L572 316 L474 316 L474 312 L364 392 L364 296 L452 236 Z"/>
-      <rect x="474" y="236" width="98" height="480"/>
-      <rect x="374" y="704" width="296" height="84" rx="10"/>
-    </g>
+  <path d="M627.36 100 c103.83 0 155.75 0 195.41 20.21 a185.4 185.4 0 0 1 81.02 81.02 c20.21 39.66 20.21 91.58 20.21 195.41 L924 627.36 c0 103.83 0 155.75 -20.21 195.41 a185.4 185.4 0 0 1 -81.02 81.02 c-39.66 20.21 -91.58 20.21 -195.41 20.21 L396.64 924 c-103.83 0 -155.75 0 -195.41 -20.21 a185.4 185.4 0 0 1 -81.02 -81.02 c-20.21 -39.66 -20.21 -91.58 -20.21 -195.41 L100 396.64 c0 -103.83 0 -155.75 20.21 -195.41 a185.4 185.4 0 0 1 81.02 -81.02 c39.66 -20.21 91.58 -20.21 195.41 -20.21 Z" fill="url(#tile)" filter="url(#shadow)"/>
+  <path d="M627.36 100 c103.83 0 155.75 0 195.41 20.21 a185.4 185.4 0 0 1 81.02 81.02 c20.21 39.66 20.21 91.58 20.21 195.41 L924 627.36 c0 103.83 0 155.75 -20.21 195.41 a185.4 185.4 0 0 1 -81.02 81.02 c-39.66 20.21 -91.58 20.21 -195.41 20.21 L396.64 924 c-103.83 0 -155.75 0 -195.41 -20.21 a185.4 185.4 0 0 1 -81.02 -81.02 c-20.21 -39.66 -20.21 -91.58 -20.21 -195.41 L100 396.64 c0 -103.83 0 -155.75 20.21 -195.41 a185.4 185.4 0 0 1 81.02 -81.02 c39.66 -20.21 91.58 -20.21 195.41 -20.21 Z" fill="url(#sheen)"/>
+  <!-- The glyph from pass1.svg, scaled to the body (824/1024) and nudged to its optical center. -->
+  <g fill="#ffffff" transform="translate(100 96) scale(0.8047)">
+    <path d="M572 236 L572 316 L474 316 L474 312 L364 392 L364 296 L452 236 Z"/>
+    <rect x="474" y="236" width="98" height="480"/>
+    <rect x="374" y="704" width="296" height="84" rx="10"/>
   </g>
 </svg>
