@@ -1,3 +1,7 @@
+// macOS 26 and later show liquid-glass/pass1.icon instead (Apple's layered Liquid Glass format,
+// edited in Icon Composer inside Xcode, compiled by the packager). Its "1" (Assets/one.svg) is
+// the same shapes as in the SVGs here; change them together.
+//
 // Renders the app icons from the two SVGs next to this file, and writes them in each platform's
 // format: pass1.icns (macOS), pass1.ico (Windows), pass1.png (Linux, and the window icon), and
 // pass1-macos.png (the Dock icon while developing, when there's no app bundle with the .icns).
