@@ -28,9 +28,23 @@ export interface Database {
   close(): Promise<void>;
 }
 
-export async function openDatabase(url: string): Promise<Database> {
+export interface DatabaseOptions {
+  /** Called when Postgres drops an idle connection. server.ts logs it; tests ignore it. */
+  onConnectionLost?: (error: Error) => void;
+}
+
+/**
+ * Opens the database and brings its schema up to date.
+ * Input: DATABASE_URL (see the formats above). Output: the query API and a way to close it.
+ */
+export async function openDatabase(url: string, { onConnectionLost = () => {} }: DatabaseOptions = {}): Promise<Database> {
   if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
     const pool = new pg.Pool({ connectionString: url, max: 10 });
+    // Trap: when Postgres restarts or ends a connection (say, during an upgrade), the pool emits
+    // "error" for each idle connection it loses. Without a listener, Node treats that as an
+    // unhandled error and the whole API process crashes. The pool itself recovers: the next
+    // query opens a new connection.
+    pool.on("error", onConnectionLost);
     await migrateOneServerAtATime(pool);
     const db = drizzlePg(pool, { schema });
     return { db: db as unknown as Db, close: () => pool.end() };

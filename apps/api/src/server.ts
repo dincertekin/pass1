@@ -9,8 +9,12 @@ import { deleteEndedRateLimitWindows } from "./rate-limit-store.js";
 import { loginFailureRule } from "./rate-limits.js";
 
 const config = loadConfig();
-const { db, close } = await openDatabase(config.DATABASE_URL);
-const app = await buildApp({ config, db });
+// The app's logger doesn't exist yet when the database opens, so the handler looks it up later.
+let app: Awaited<ReturnType<typeof buildApp>> | null = null;
+const { db, close } = await openDatabase(config.DATABASE_URL, {
+  onConnectionLost: (error) => app?.log.warn({ err: error }, "lost an idle database connection; the next query reconnects"),
+});
+app = await buildApp({ config, db });
 
 app.listen({ port: config.PORT, host: config.HOST }).catch((err) => {
   app.log.error(err);

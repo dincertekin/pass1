@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import pg from "pg";
 import { emptyTestDatabase, TEST_DATABASE_URL } from "../test-helpers.js";
@@ -57,6 +57,27 @@ describe("openDatabase", () => {
 
 // Two API servers starting at the same moment on a database that still needs migrating. Only
 // meaningful on a real Postgres server (CI sets TEST_DATABASE_URL); PGlite runs one query at a time.
+describe.skipIf(!TEST_DATABASE_URL.startsWith("postgres"))("When Postgres ends a connection", () => {
+  it("reports it and keeps working, instead of crashing the server", async () => {
+    const lost: Error[] = [];
+    const database = await openDatabase(TEST_DATABASE_URL, { onConnectionLost: (error) => lost.push(error) });
+    try {
+      await database.db.execute(sql`select 1`);
+      // What a Postgres restart does to every open connection.
+      const admin = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await admin.connect();
+      await admin.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()");
+      await admin.end();
+
+      await expect.poll(() => lost.length).toBeGreaterThan(0);
+      // The next query reconnects and works.
+      expect(await database.db.select({ id: users.id }).from(users).limit(1)).toEqual(expect.any(Array));
+    } finally {
+      await database.close();
+    }
+  });
+});
+
 describe.skipIf(!TEST_DATABASE_URL.startsWith("postgres"))("Several servers starting at once", () => {
   it("migrate one after the other instead of tripping over each other", async () => {
     const admin = new pg.Client({ connectionString: TEST_DATABASE_URL });
