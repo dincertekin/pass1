@@ -1,0 +1,17 @@
+<!-- pass1's app icon for Windows and Linux: the "1" tile filling the square. The "1" is drawn as
+     shapes, not text, so it looks the same everywhere. make-icons.mjs renders it. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#25598a"/>
+      <stop offset="1" stop-color="#1a4268"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#tile)"/>
+  <g fill="#ffffff">
+    <!-- flag, stem and base of the "1" -->
+    <path d="M572 236 L572 316 L474 316 L474 312 L364 392 L364 296 L452 236 Z"/>
+    <rect x="474" y="236" width="98" height="480"/>
+    <rect x="374" y="704" width="296" height="84" rx="10"/>
+  </g>
+</svg>

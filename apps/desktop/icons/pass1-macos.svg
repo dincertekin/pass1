@@ -1,0 +1,21 @@
+<!-- pass1's app icon for macOS: the same tile on Apple's icon grid (an 824-point rounded square
+     on a 1024 canvas, with a soft shadow), so it sits right among other Mac apps. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#25598a"/>
+      <stop offset="1" stop-color="#1a4268"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g transform="translate(100 100) scale(0.8047)">
+    <rect width="1024" height="1024" rx="230" fill="url(#tile)" filter="url(#shadow)"/>
+    <g fill="#ffffff">
+      <path d="M572 236 L572 316 L474 316 L474 312 L364 392 L364 296 L452 236 Z"/>
+      <rect x="474" y="236" width="98" height="480"/>
+      <rect x="374" y="704" width="296" height="84" rx="10"/>
+    </g>
+  </g>
+</svg>

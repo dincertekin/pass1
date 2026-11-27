@@ -10,7 +10,8 @@
     "start": "npm run build -w @pass1/web && node build.mjs && electron .",
     "typecheck": "tsc --noEmit",
     "package": "npm run build -w @pass1/web && node build.mjs && node package.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "icons": "node icons/make-icons.mjs"
   },
   "dependencies": {
     "@pass1/shared": "*"
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@electron/fuses": "2.1.3",
     "@electron/packager": "20.3.0",
+    "@playwright/test": "1.63.0",
     "@types/node": "^26.6.5",
     "electron": "45.5.0",
     "esbuild": "0.28.2",

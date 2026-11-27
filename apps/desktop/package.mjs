@@ -20,11 +20,14 @@ const [appPath] = await packager({
   overwrite: true,
   name: "pass1",
   appBundleId: "app.pass1.desktop",
+  // Without an extension: pass1.icns on macOS, pass1.ico on Windows (made by icons/make-icons.mjs).
+  icon: join("icons", "pass1"),
   // The app's code in one archive, checked against a hash at startup (fuse below).
   asar: true,
   extraResource: [STAGED_WEB],
   // Only the bundled main process and package.json go in: everything else is bundled or unused.
-  ignore: [/^\/(src|build|out|node_modules)(\/|$)/, /^\/(build|package)\.mjs$/, /^\/tsconfig\.json$/],
+  // The icons folder ships only pass1.png, the window icon on Windows and Linux.
+  ignore: [/^\/(src|build|out|node_modules)(\/|$)/, /^\/(build|package)\.mjs$/, /^\/tsconfig\.json$/, /^\/icons\/(?!pass1\.png$)/],
 });
 
 // Electron features pass1 never uses, switched off inside the binary itself, so nobody can turn

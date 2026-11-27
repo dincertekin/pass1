@@ -12,6 +12,8 @@ import { validateRequest } from "./request-validation.js";
 import { readServerAddress } from "./server-address.js";
 
 const WINDOW_SIZE = { width: 1280, height: 820, minWidth: 380, minHeight: 560 };
+// Windows and Linux show this in the title bar and taskbar. macOS uses pass1.icns from the app bundle.
+const WINDOW_ICON = join(app.getAppPath(), "icons", "pass1.png");
 
 // Tests give each run its own folder, so their tokens and settings never mix, and a fake
 // keychain, so they never touch the real one of whoever runs them (macOS would also stop and ask
@@ -34,6 +36,7 @@ function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     ...WINDOW_SIZE,
     title: "pass1",
+    icon: WINDOW_ICON,
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
       contextIsolation: true,
@@ -56,6 +59,8 @@ function lockOnSleep(getWindow: () => BrowserWindow | null) {
 }
 
 app.whenReady().then(() => {
+  // During development the Dock would show Electron's own icon.
+  if (!app.isPackaged) app.dock?.setIcon(WINDOW_ICON);
   const server = readServerAddress();
   if ("error" in server) {
     dialog.showErrorBox("pass1 can't start", server.error);
