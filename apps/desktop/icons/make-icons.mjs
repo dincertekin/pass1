@@ -27,17 +27,20 @@ const ICNS_TYPES = [
 ];
 const LINUX_SIZE = 512;
 
-/** Input: an SVG file and sizes. Output: a PNG (Buffer) per size, with a transparent background. */
+/**
+ * Input: an SVG file and sizes. Output: a PNG (Buffer) per size, with a transparent background.
+ * Trap: each size gets a fresh page. Resizing one page and taking the screenshot straight away
+ * left pieces of the previous size's drawing in the picture (the icon cut off and repeated).
+ */
 async function renderPngs(browser, svgFile, sizes) {
   const svg = readFileSync(join(HERE, svgFile), "utf8");
-  const page = await browser.newPage();
   const pngs = new Map();
   for (const size of sizes) {
-    await page.setViewportSize({ width: size, height: size });
+    const page = await browser.newPage({ viewport: { width: size, height: size } });
     await page.setContent(`<style>html,body{margin:0;background:transparent}svg{width:${size}px;height:${size}px;display:block}</style>${svg}`);
     pngs.set(size, await page.screenshot({ omitBackground: true }));
+    await page.close();
   }
-  await page.close();
   return pngs;
 }
 
