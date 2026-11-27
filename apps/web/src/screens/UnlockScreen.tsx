@@ -5,6 +5,7 @@ import { Button } from "../components/ui/Button";
 import { PasswordField } from "../components/ui/TextField";
 import { errorMessage, useSession } from "../session/session";
 import { SlowOnPurpose } from "./LoginScreen";
+import { t } from "../lib/i18n";
 
 export function UnlockScreen({ email }: { email: string }) {
   const { unlock, logOut } = useSession();
@@ -27,13 +28,13 @@ export function UnlockScreen({ email }: { email: string }) {
 
   return (
     <AuthLayout
-      title="Unlock your vault"
+      title={t("unlock.title")}
       subtitle={email}
       footer={
         <>
-          Not you?{" "}
+          {t("unlock.notYou")}{" "}
           <button type="button" onClick={logOut} className="cursor-pointer font-medium text-accent hover:underline">
-            Log out
+            {t("common.logOut")}
           </button>
         </>
       }
@@ -43,7 +44,7 @@ export function UnlockScreen({ email }: { email: string }) {
         {/* Hidden username so password managers know which account this is for. */}
         <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />
         <PasswordField
-          label="Master password"
+          label={t("common.masterPassword")}
           autoComplete="current-password"
           autoFocus
           required
@@ -51,7 +52,7 @@ export function UnlockScreen({ email }: { email: string }) {
           onChange={(e) => setPassword(e.target.value)}
         />
         <Button type="submit" size="lg" disabled={busy}>
-          {busy ? "Unlocking vault…" : "Unlock"}
+          {busy ? t("common.unlockingVault") : t("unlock.submit")}
         </Button>
         {busy && <SlowOnPurpose />}
       </form>

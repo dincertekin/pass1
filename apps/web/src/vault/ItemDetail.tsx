@@ -6,12 +6,14 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { IconButton } from "../components/ui/IconButton";
 import { errorMessage } from "../session/session";
 import { CopyButton } from "./CopyButton";
-import { displayName, safeHref } from "@pass1/core";
+import { safeHref } from "@pass1/core";
 import type { ItemHealth } from "@pass1/core";
 import { HealthChip } from "./HealthChip";
 import { ItemAvatar } from "./ItemAvatar";
 import type { VaultEntry } from "@pass1/core";
 import { useVault } from "./vault-store";
+import { t } from "../lib/i18n";
+import { itemName } from "./item-name";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -45,7 +47,7 @@ export function ItemDetail({ entry, health, onEdit, onBack, headingRef }: {
     <article className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-5 md:px-9 md:py-7">
       <div className="mx-auto flex w-full max-w-220 flex-1 flex-col gap-5">
         <Button variant="ghost" size="sm" onClick={onBack} className="self-start md:hidden">
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={14} /> {t("common.back")}
         </Button>
 
         <header className="flex flex-wrap items-center justify-between gap-3">
@@ -53,22 +55,22 @@ export function ItemDetail({ entry, health, onEdit, onBack, headingRef }: {
             <ItemAvatar entry={entry} size="lg" />
             <div className="min-w-0">
               <h2 ref={headingRef} tabIndex={-1} className="truncate text-[22px] font-semibold tracking-tight outline-none">
-                {displayName(entry)}
+                {itemName(entry)}
               </h2>
-              <p className="truncate text-[13px] text-muted">{inTrash ? "In trash" : href ? new URL(href).hostname : "No website"}</p>
+              <p className="truncate text-[13px] text-muted">{inTrash ? t("item.inTrash") : href ? new URL(href).hostname : t("item.noWebsite")}</p>
             </div>
           </div>
           {item && !inTrash && (
             <div className="flex items-center gap-1.5">
               <IconButton
-                label={item.favorite ? "Remove from favorites" : "Add to favorites"}
+                label={item.favorite ? t("item.removeFavorite") : t("item.addFavorite")}
                 aria-pressed={item.favorite === true}
                 onClick={() => run(() => vault.update(entry, { ...item, favorite: !item.favorite }))}
               >
                 <Star size={16} className={item.favorite ? "fill-accent text-accent" : undefined} />
               </IconButton>
               <Button variant="secondary" size="sm" onClick={onEdit}>
-                Edit
+                {t("common.edit")}
               </Button>
             </div>
           )}
@@ -81,20 +83,20 @@ export function ItemDetail({ entry, health, onEdit, onBack, headingRef }: {
         {item ? (
           <dl className="rounded-lg border border-border bg-surface">
             {item.username && (
-              <Field label="Username" actions={<CopyButton value={item.username} label="Copy username" what="Username" />}>
+              <Field label={t("item.username")} actions={<CopyButton value={item.username} label={t("item.copyUsername")} what={t("item.username")} />}>
                 {item.username}
               </Field>
             )}
             <Field
-              label="Password"
+              label={t("item.password")}
               mono
               actions={
                 <>
                   <HealthChip health={health} />
-                  <IconButton label={revealed ? "Hide password" : "Show password"} onClick={() => setRevealed((r) => !r)}>
+                  <IconButton label={revealed ? t("item.hidePassword") : t("item.showPassword")} onClick={() => setRevealed((r) => !r)}>
                     {revealed ? <EyeOff size={16} /> : <Eye size={16} />}
                   </IconButton>
-                  <CopyButton value={item.password} label="Copy password" what="Password" />
+                  <CopyButton value={item.password} label={t("item.copyPassword")} what={t("item.password")} />
                 </>
               }
             >
@@ -102,15 +104,15 @@ export function ItemDetail({ entry, health, onEdit, onBack, headingRef }: {
             </Field>
             {item.url && (
               <Field
-                label="Website"
+                label={t("item.website")}
                 actions={
                   href && (
                     <a
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="Open website"
-                      title="Open website"
+                      aria-label={t("item.openWebsite")}
+                      title={t("item.openWebsite")}
                       className="grid size-7 place-items-center rounded-sm text-muted hover:bg-sunken hover:text-text"
                     >
                       <ExternalLink size={16} />
@@ -123,36 +125,34 @@ export function ItemDetail({ entry, health, onEdit, onBack, headingRef }: {
             )}
           </dl>
         ) : (
-          <Alert>
-            This item couldn't be decrypted. It was corrupted or changed by someone without your key. You can delete it.
-          </Alert>
+          <Alert>{t("item.undecryptable")}</Alert>
         )}
 
         {item?.notes && (
           <section className="grid gap-1">
-            <h3 className="text-[11px] font-semibold tracking-wide text-muted uppercase">Notes</h3>
+            <h3 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{t("item.notes")}</h3>
             <p className="text-[13px] whitespace-pre-wrap">{item.notes}</p>
           </section>
         )}
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <p className="text-xs text-muted">Updated {dateFormat.format(entry.updatedAt)} · Encrypted on this device</p>
+          <p className="text-xs text-muted">{t("item.updated", { date: dateFormat.format(entry.updatedAt) })}</p>
           {inTrash ? (
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => run(() => vault.restore(entry))}>
-                Restore
+                {t("item.restore")}
               </Button>
               <ConfirmDialog
-                trigger={<Button variant="danger" size="sm">Delete forever</Button>}
-                title={`Delete "${displayName(entry)}" forever?`}
-                description="It will be removed from pass1 on every device. This can't be undone."
-                confirmLabel="Delete forever"
+                trigger={<Button variant="danger" size="sm">{t("item.deleteForever")}</Button>}
+                title={t("item.deleteForeverTitle", { name: itemName(entry) })}
+                description={t("item.deleteForeverDescription")}
+                confirmLabel={t("item.deleteForever")}
                 onConfirm={() => run(() => vault.remove(entry))}
               />
             </div>
           ) : (
             <Button variant="danger" size="sm" onClick={() => run(() => vault.trash(entry))}>
-              Move to Trash
+              {t("item.moveToTrash")}
             </Button>
           )}
         </div>
@@ -180,10 +180,12 @@ function HealthWarning({ health, onFix }: { health: ItemHealth | undefined; onFi
   if (!health) return null;
   let message: string | null = null;
   if (health.reusedWith.length > 0) {
-    const others = health.reusedWith.length === 1 ? health.reusedWith[0] : `${health.reusedWith.length} other items`;
-    message = `This password is also used for ${others}. If one of those sites leaks it, this account is exposed too.`;
+    message =
+      health.reusedWith.length === 1
+        ? t("health.reusedWithItem", { name: health.reusedWith[0]! })
+        : t("health.reusedWithItems", { count: health.reusedWith.length });
   } else if (health.strength === "weak") {
-    message = "This password is easy to guess. Replace it with a generated one.";
+    message = t("health.weak");
   }
   if (!message) return null;
 
@@ -192,7 +194,7 @@ function HealthWarning({ health, onFix }: { health: ItemHealth | undefined; onFi
       <AlertTriangle size={16} className="shrink-0 text-warning" aria-hidden="true" />
       <span className="min-w-0 flex-1">{message}</span>
       <Button variant="secondary" size="sm" onClick={onFix}>
-        Change password
+        {t("health.changePassword")}
       </Button>
     </div>
   );

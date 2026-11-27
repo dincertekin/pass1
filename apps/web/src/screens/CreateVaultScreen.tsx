@@ -8,6 +8,7 @@ import { PasswordField, TextField } from "../components/ui/TextField";
 import { MIN_MASTER_PASSWORD_SCORE, usePasswordStrength } from "../lib/password-strength";
 import { errorMessage, useSession } from "../session/session";
 import { SlowOnPurpose } from "./LoginScreen";
+import { t, tx } from "../lib/i18n";
 
 /**
  * Step 2 of creating an account, opened from the emailed link: choose the master password.
@@ -41,13 +42,13 @@ export function CreateVaultScreen({ signupToken, email }: { signupToken: string;
 
   return (
     <AuthLayout
-      title="Create your vault"
-      subtitle="Everything is encrypted on this device before it's saved."
+      title={t("signup.title")}
+      subtitle={t("createVault.subtitle")}
       footer={
         <>
-          Already have an account?{" "}
+          {t("signup.haveAccount")}{" "}
           <Link to="/login" className="font-medium text-accent hover:underline">
-            Log in
+            {t("common.logIn")}
           </Link>
         </>
       }
@@ -55,7 +56,7 @@ export function CreateVaultScreen({ signupToken, email }: { signupToken: string;
       <form onSubmit={handleSubmit} className="grid gap-4">
         {error && <Alert>{error}</Alert>}
         <TextField
-          label="Email"
+          label={t("common.email")}
           type="email"
           // Lets the browser save the new password together with this email.
           autoComplete="username"
@@ -63,7 +64,7 @@ export function CreateVaultScreen({ signupToken, email }: { signupToken: string;
           value={email}
         />
         <PasswordField
-          label="Master password"
+          label={t("common.masterPassword")}
           autoComplete="new-password"
           required
           value={password}
@@ -72,26 +73,23 @@ export function CreateVaultScreen({ signupToken, email }: { signupToken: string;
             <>
               <StrengthMeter strength={strength} />
               {strength && !strongEnough && (
-                <p className="text-xs text-muted">Needs to be at least "Good". A few random words work well.</p>
+                <p className="text-xs text-muted">{t("createVault.needsGood")}</p>
               )}
             </>
           }
         />
         <PasswordField
-          label="Confirm master password"
+          label={t("createVault.confirm")}
           autoComplete="new-password"
           required
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           aria-invalid={mismatch}
-          hint={mismatch && <p className="text-xs text-danger">Passwords don't match.</p>}
+          hint={mismatch && <p className="text-xs text-danger">{t("createVault.mismatch")}</p>}
         />
 
         <Alert tone="warning">
-          <p>
-            <strong className="text-warning">There is no password reset.</strong> pass1 never sees your master
-            password, so nobody can recover your vault if you forget it.
-          </p>
+          <p>{tx("createVault.noResetWarning", { noReset: <strong className="text-warning">{t("createVault.noReset")}</strong> })}</p>
           <label className="mt-2 flex items-start gap-2">
             <input
               type="checkbox"
@@ -99,12 +97,12 @@ export function CreateVaultScreen({ signupToken, email }: { signupToken: string;
               onChange={(e) => setUnderstood(e.target.checked)}
               className="mt-0.5 accent-accent"
             />
-            I understand that a lost master password means a lost vault.
+            {t("createVault.understand")}
           </label>
         </Alert>
 
         <Button type="submit" size="lg" disabled={!canSubmit}>
-          {busy ? "Creating vault…" : "Create account"}
+          {busy ? t("createVault.creating") : t("createVault.submit")}
         </Button>
         {busy && <SlowOnPurpose />}
       </form>

@@ -1,12 +1,15 @@
 import type { VaultItem } from "@pass1/crypto";
+import { englishText } from "../i18n/english";
+import type { MessageKey } from "../i18n/translate";
 import { parseCsv } from "./csv";
 
 // Turns another password manager's export into pass1 items. Everything happens on this
 // device: the file is read here, and only the encrypted items are sent to the server.
 
+/** Something is wrong with the file. `messageKey` says what, for the app to show in its language. */
 export class ImportFileError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(readonly messageKey: MessageKey) {
+    super(englishText(messageKey));
     this.name = "ImportFileError";
   }
 }
@@ -25,19 +28,19 @@ const COLUMNS = {
 /** Reads a CSV or Bitwarden JSON export. Throws ImportFileError with a sentence for the user. */
 export function itemsFromFile(fileName: string, text: string): VaultItem[] {
   const items = fileName.toLowerCase().endsWith(".json") ? itemsFromBitwardenJson(text) : itemsFromCsv(text);
-  if (items.length === 0) throw new ImportFileError("No passwords found in this file.");
+  if (items.length === 0) throw new ImportFileError("import.noPasswords");
   return items;
 }
 
 export function itemsFromCsv(text: string): VaultItem[] {
   const [header, ...rows] = parseCsv(text);
-  if (!header) throw new ImportFileError("This file is empty.");
+  if (!header) throw new ImportFileError("import.empty");
 
   const names = header.map((h) => h.trim().toLowerCase());
   const column = (key: keyof typeof COLUMNS) => names.findIndex((n) => COLUMNS[key].includes(n));
   const at = { name: column("name"), url: column("url"), username: column("username"), password: column("password"), notes: column("notes"), favorite: column("favorite") };
   if (at.password === -1) {
-    throw new ImportFileError("This CSV has no password column. Export from your password manager as CSV and try again.");
+    throw new ImportFileError("import.noPasswordColumn");
   }
 
   return rows.map((row) => {
@@ -74,12 +77,12 @@ export function itemsFromBitwardenJson(text: string): VaultItem[] {
   try {
     data = JSON.parse(text) as BitwardenJson;
   } catch {
-    throw new ImportFileError("This file isn't valid JSON.");
+    throw new ImportFileError("import.invalidJson");
   }
   if (data.encrypted) {
-    throw new ImportFileError("This is an encrypted Bitwarden export. Export again as unencrypted JSON or CSV, import it, then delete the file.");
+    throw new ImportFileError("import.encryptedBitwarden");
   }
-  if (!Array.isArray(data.items)) throw new ImportFileError("This isn't a Bitwarden JSON export.");
+  if (!Array.isArray(data.items)) throw new ImportFileError("import.notBitwarden");
 
   return data.items
     .filter((it) => it.type === 1 || it.type === 2) // 1 = login, 2 = secure note

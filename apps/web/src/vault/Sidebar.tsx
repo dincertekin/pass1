@@ -8,8 +8,9 @@ import { useBilling } from "../lib/billing";
 import { useLockCountdown } from "../session/auto-lock";
 import { MOD_KEY } from "../lib/shortcuts";
 import { useSession } from "../session/session";
-import { SECTION_LABELS, type Section } from "@pass1/core";
+import { SECTION_MESSAGES, type Section } from "@pass1/core";
 import type { VaultEntry } from "@pass1/core";
+import { t, tx } from "../lib/i18n";
 
 const SECTION_ICONS: Record<Section, ReactNode> = {
   all: <List size={15} />,
@@ -30,12 +31,12 @@ export function Sidebar({ entries, counts, section, onSectionChange, userId, ema
   onOpenPlans: () => void;
 }) {
   return (
-    <nav aria-label="Vault" className="hidden w-58 shrink-0 flex-col gap-0.5 border-r border-border bg-sidebar px-2.5 py-3.5 md:flex">
+    <nav aria-label={t("nav.vault")} className="hidden w-58 shrink-0 flex-col gap-0.5 border-r border-border bg-sidebar px-2.5 py-3.5 md:flex">
       <div className="px-2.5 pt-0.5 pb-4">
         <Logo />
       </div>
 
-      {(Object.keys(SECTION_LABELS) as Section[]).map((s) => (
+      {(Object.keys(SECTION_MESSAGES) as Section[]).map((s) => (
         <button
           key={s}
           type="button"
@@ -47,7 +48,7 @@ export function Sidebar({ entries, counts, section, onSectionChange, userId, ema
           )}
         >
           <span aria-hidden="true">{SECTION_ICONS[s]}</span>
-          <span className="flex-1">{SECTION_LABELS[s]}</span>
+          <span className="flex-1">{t(SECTION_MESSAGES[s])}</span>
           {s === "health" ? (
             counts.health > 0 && <span className="rounded-full bg-warning-soft px-[7px] text-[11px] font-semibold text-warning">{counts.health}</span>
           ) : (
@@ -79,15 +80,15 @@ function PlanCard({ entries, userId, plan, onOpenPlans }: { entries: VaultEntry[
   const overLimit = itemShare > 1 || byteShare > 1;
   const usage =
     byteShare > itemShare
-      ? `${formatMB(bytes)} of ${formatMB(limits.maxStorageBytes)}`
+      ? t("plan.usage", { used: formatMB(bytes), limit: formatMB(limits.maxStorageBytes) })
       : limits.maxItems === null
-        ? `${items} items`
-        : `${items} of ${limits.maxItems} items`;
+        ? t("plan.items", { count: items })
+        : t("plan.itemsOfLimit", { count: items, limit: limits.maxItems });
 
   return (
     <div className="grid gap-2 rounded-lg border border-accent-line bg-accent-soft p-3">
       <div className="flex justify-between gap-2 text-xs">
-        <span className="font-semibold text-accent">{plan === "free" ? "Free plan" : name}</span>
+        <span className="font-semibold text-accent">{plan === "free" ? t("plan.free") : name}</span>
         <span className="text-muted tabular-nums">{usage}</span>
       </div>
       <div className="h-1 rounded-full bg-accent-line" aria-hidden="true">
@@ -97,14 +98,12 @@ function PlanCard({ entries, userId, plan, onOpenPlans }: { entries: VaultEntry[
         />
       </div>
       {overLimit && (
-        <p className="text-xs text-danger">
-          Over your plan's limit. You can still view, copy, export and delete items, but not add new ones.
-        </p>
+        <p className="text-xs text-danger">{t("plan.overLimit")}</p>
       )}
-      {paymentFailed && <p className="text-xs text-warning">Your last payment didn't go through. Update your card in Settings → Account.</p>}
+      {paymentFailed && <p className="text-xs text-warning">{t("plan.paymentFailed")}</p>}
       {plan !== "unlimited" && (
         <button type="button" onClick={onOpenPlans} className="cursor-pointer justify-self-start text-xs font-semibold text-accent hover:underline">
-          {plan === "free" ? "Get pass1 Plus →" : "See plans →"}
+          {plan === "free" ? t("plan.getPlus") : t("plan.seePlans")}
         </button>
       )}
     </div>
@@ -126,7 +125,7 @@ export function AccountMenu({ email, onOpenSettings, side }: { email: string; on
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] font-medium">{email}</span>
             <span className="block text-xs text-muted">
-              Locks in <span className="font-mono tabular-nums">{locksIn}</span>
+              {tx("account.locksIn", { time: <span className="font-mono tabular-nums">{locksIn}</span> })}
             </span>
           </span>
           <ChevronUp size={14} className="shrink-0 text-muted" aria-hidden="true" />
@@ -139,10 +138,10 @@ export function AccountMenu({ email, onOpenSettings, side }: { email: string; on
           sideOffset={6}
           className="animate-pop-in z-30 grid w-53 gap-0.5 rounded-lg border border-border bg-surface p-1.5 shadow-pop"
         >
-          <MenuItem icon={<Settings size={15} />} label="Settings" shortcut={`${MOD_KEY},`} onSelect={onOpenSettings} />
-          <MenuItem icon={<Lock size={15} />} label="Lock now" shortcut={`${MOD_KEY}L`} onSelect={lock} />
+          <MenuItem icon={<Settings size={15} />} label={t("account.settings")} shortcut={`${MOD_KEY},`} onSelect={onOpenSettings} />
+          <MenuItem icon={<Lock size={15} />} label={t("account.lockNow")} shortcut={`${MOD_KEY}L`} onSelect={lock} />
           <DropdownMenu.Separator className="mx-1.5 my-1 h-px bg-border" />
-          <MenuItem icon={<LogOut size={15} />} label="Log out" onSelect={() => void logOut()} muted />
+          <MenuItem icon={<LogOut size={15} />} label={t("common.logOut")} onSelect={() => void logOut()} muted />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -173,5 +172,6 @@ function MenuItem({ icon, label, shortcut, onSelect, muted }: {
 
 function formatMB(bytes: number) {
   const mb = bytes / (1024 * 1024);
-  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+  const size = new Intl.NumberFormat(undefined, { maximumFractionDigits: mb < 10 ? 1 : 0, minimumFractionDigits: mb < 10 ? 1 : 0 }).format(mb);
+  return t("plan.megabytes", { size });
 }

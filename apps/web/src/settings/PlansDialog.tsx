@@ -9,6 +9,8 @@ import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { openBillingPortal, startCheckout, useBilling } from "../lib/billing";
 import { errorMessage } from "../session/session";
 import { Outcome } from "./layout";
+import { PLAN_FEATURES } from "@pass1/core";
+import { t } from "../lib/i18n";
 
 // The plans side by side. Choosing one sends the browser to Paddle's checkout; people already
 // subscribed change plans in Paddle's portal. Without billing configured on the server, the
@@ -41,14 +43,14 @@ export function PlansDialog({ open, onOpenChange, currentPlan, userId }: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="pass1 plans" description="Every plan has the same encryption. Paid plans add room and features." size="lg">
+    <Dialog open={open} onOpenChange={onOpenChange} title={t("plans.title")} description={t("plans.description")} size="lg">
       <div className="flex justify-center px-5 pt-3">
         <SegmentedControl
-          label="Billing period"
+          label={t("plans.billingPeriod")}
           value={interval}
           options={[
-            { value: "year", label: "Yearly" },
-            { value: "month", label: "Monthly" },
+            { value: "year", label: t("plans.yearly") },
+            { value: "month", label: t("plans.monthly") },
           ]}
           onChange={setInterval}
         />
@@ -67,30 +69,30 @@ export function PlansDialog({ open, onOpenChange, currentPlan, userId }: {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold">{plan.name}</span>
-                {isCurrent ? <Badge tone="accent">Your plan</Badge> : id === "plus" && <Badge tone="accent-solid">Recommended</Badge>}
+                {isCurrent ? <Badge tone="accent">{t("plans.yourPlan")}</Badge> : id === "plus" && <Badge tone="accent-solid">{t("plans.recommended")}</Badge>}
               </div>
 
               <div className="grid gap-0.5">
                 <div className="flex items-baseline gap-1">
                   <span className="text-[28px] font-bold tracking-tight tabular-nums">
-                    {plan.price ? usd.format(interval === "year" ? plan.price.yearly : plan.price.monthly) : "$0"}
+                    {plan.price ? usd.format(interval === "year" ? plan.price.yearly : plan.price.monthly) : usd.format(0)}
                   </span>
-                  <span className="text-[13px] text-muted">{plan.price ? (interval === "year" ? "/ year" : "/ month") : "forever"}</span>
+                  <span className="text-[13px] text-muted">{plan.price ? (interval === "year" ? t("plans.perYear") : t("plans.perMonth")) : t("plans.forever")}</span>
                 </div>
                 <span className="text-xs text-muted">
                   {!plan.price
-                    ? "No card needed"
+                    ? t("plans.noCard")
                     : interval === "year"
-                      ? `${usd.format(plan.price.yearly / 12)} a month, billed yearly`
-                      : `or ${usd.format(plan.price.yearly)} billed yearly`}
+                      ? t("plans.monthlyEquivalent", { price: usd.format(plan.price.yearly / 12) })
+                      : t("plans.orYearly", { price: usd.format(plan.price.yearly) })}
                 </span>
               </div>
 
               <ul className="grid gap-2 border-t border-border pt-4 text-[13px]">
-                {plan.features.map((feature) => (
+                {PLAN_FEATURES[id].map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
                     <Check size={14} className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
-                    {feature}
+                    {t(feature)}
                   </li>
                 ))}
               </ul>
@@ -99,7 +101,7 @@ export function PlansDialog({ open, onOpenChange, currentPlan, userId }: {
                 <div className="mt-auto pt-1">
                   {subscribed ? (
                     <Button variant="secondary" className="w-full" disabled={busy !== null} onClick={() => go(openBillingPortal, id)}>
-                      {busy === id ? "Opening…" : isCurrent ? "Manage subscription" : "Switch plan"}
+                      {busy === id ? t("plans.opening") : isCurrent ? t("settings.manageSubscription") : t("plans.switch")}
                     </Button>
                   ) : (
                     <Button
@@ -108,7 +110,7 @@ export function PlansDialog({ open, onOpenChange, currentPlan, userId }: {
                       disabled={busy !== null}
                       onClick={() => go(() => startCheckout({ plan: id, interval }), id)}
                     >
-                      {busy === id ? "Opening checkout…" : `Choose ${plan.name.replace("pass1 ", "")}`}
+                      {busy === id ? t("plans.openingCheckout") : t("plans.choose", { plan: plan.name.replace("pass1 ", "") })}
                     </Button>
                   )}
                 </div>
@@ -121,9 +123,9 @@ export function PlansDialog({ open, onOpenChange, currentPlan, userId }: {
       <div className="grid gap-2 px-5 pt-3 pb-5 text-[13px] text-muted">
         {error && <Outcome tone="danger">{error}</Outcome>}
         {billing === null ? null : billing.enabled ? (
-          <p>Payments are handled by Paddle. pass1 never sees your card details. Cancel any time; your vault stays yours.</p>
+          <p>{t("plans.paddleNote")}</p>
         ) : (
-          <p>Upgrades open soon. Your vault stays as it is until then.</p>
+          <p>{t("plans.openingSoon")}</p>
         )}
       </div>
     </Dialog>

@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { errorMessage } from "../session/session";
 import { CreateVaultScreen } from "./CreateVaultScreen";
 import { SignUpScreen } from "./SignUpScreen";
+import { t } from "../lib/i18n";
 
 // /register asks for an email. /register#token=... is the emailed link: it chooses the
 // master password. The token is after "#" so the browser never sends it to the server.
@@ -54,14 +55,14 @@ function SignupLink({ signupToken }: { signupToken: string }) {
 
   if (link.status === "ready") return <CreateVaultScreen signupToken={signupToken} email={link.email} />;
   return (
-    <AuthLayout title="Create your vault">
+    <AuthLayout title={t("signup.title")}>
       {link.status === "checking" ? (
-        <p className="text-center text-[13px] text-muted">Checking your link…</p>
+        <p className="text-center text-[13px] text-muted">{t("createVault.checkingLink")}</p>
       ) : (
         <div className="grid gap-4">
           <Alert>{link.message}</Alert>
           <Link to="/register" reloadDocument className="text-center text-[13px] font-medium text-accent hover:underline">
-            Start again
+            {t("createVault.startAgain")}
           </Link>
         </div>
       )}

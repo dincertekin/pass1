@@ -1,6 +1,7 @@
 import { AlertDialog } from "radix-ui";
 import type { ReactNode } from "react";
 import { Button } from "./Button";
+import { t } from "../../lib/i18n";
 
 /**
  * Asks before something that can't be undone. Radix handles focus trapping, Escape to cancel
@@ -23,7 +24,7 @@ export function ConfirmDialog({ trigger, title, description, confirmLabel, onCon
           <AlertDialog.Description className="text-[13px] text-muted">{description}</AlertDialog.Description>
           <div className="mt-2 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
-              <Button variant="secondary">Cancel</Button>
+              <Button variant="secondary">{t("common.cancel")}</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button variant="danger" onClick={onConfirm}>

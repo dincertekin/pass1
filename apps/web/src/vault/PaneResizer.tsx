@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { LIST_WIDTH } from "../lib/settings";
+import { t } from "../lib/i18n";
 
 // The draggable line between the item list and the item details (desktop only).
 //
@@ -68,7 +69,7 @@ export function PaneResizer({ width, listLeft, onResize, onResizeEnd }: {
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize the item list"
+        aria-label={t("resizer.label")}
         aria-valuenow={width}
         aria-valuemin={LIST_WIDTH.min}
         aria-valuemax={LIST_WIDTH.max}
@@ -79,7 +80,7 @@ export function PaneResizer({ width, listLeft, onResize, onResizeEnd }: {
         onPointerCancel={onPointerUp}
         onDoubleClick={() => set(LIST_WIDTH.default, true)}
         onKeyDown={onKeyDown}
-        title="Drag to resize. Double-click to reset."
+        title={t("resizer.hint")}
         className="group absolute inset-y-0 -left-1 w-2 cursor-col-resize touch-none outline-none"
       >
         <div className="mx-auto h-full w-0.5 bg-transparent transition-colors group-hover:bg-accent group-focus-visible:bg-accent group-active:bg-accent" />

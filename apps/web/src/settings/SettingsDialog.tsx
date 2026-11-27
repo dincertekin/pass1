@@ -17,15 +17,16 @@ import { DeleteAccountForm } from "./DeleteAccount";
 import { DevicesTab } from "./Devices";
 import { Outcome, Select, SettingRow } from "./layout";
 import { ExportForm, IMPORT_SOURCES, ImportForm, TransferTab, type ImportSource } from "./Transfer";
+import { t } from "../lib/i18n";
 
 export type SettingsTab = "general" | "security" | "account" | "devices" | "transfer";
 
 const TABS: { id: SettingsTab; label: string; icon: ReactNode }[] = [
-  { id: "general", label: "General", icon: <SlidersHorizontal size={15} /> },
-  { id: "security", label: "Security", icon: <ShieldCheck size={15} /> },
-  { id: "account", label: "Account", icon: <UserRound size={15} /> },
-  { id: "devices", label: "Devices", icon: <Monitor size={15} /> },
-  { id: "transfer", label: "Import & export", icon: <ArrowDownToLine size={15} /> },
+  { id: "general", label: t("settings.tabGeneral"), icon: <SlidersHorizontal size={15} /> },
+  { id: "security", label: t("settings.tabSecurity"), icon: <ShieldCheck size={15} /> },
+  { id: "account", label: t("settings.tabAccount"), icon: <UserRound size={15} /> },
+  { id: "devices", label: t("settings.tabDevices"), icon: <Monitor size={15} /> },
+  { id: "transfer", label: t("settings.tabTransfer"), icon: <ArrowDownToLine size={15} /> },
 ];
 
 /** A form that takes over a tab's space: changing the password, importing, exporting, deleting. */
@@ -55,13 +56,13 @@ export function SettingsDialog({ open, onOpenChange, tab, onTabChange, account, 
   const current = TABS.find((t) => t.id === tab)!;
   const pageTitle =
     page?.kind === "changePassword"
-      ? "Change master password"
+      ? t("settings.changePasswordTitle")
       : page?.kind === "export"
-        ? "Export your vault"
+        ? t("settings.exportTitle")
         : page?.kind === "import"
-          ? `Import from ${IMPORT_SOURCES.find((s) => s.id === page.source)!.name}`
+          ? t("settings.importTitle", { source: IMPORT_SOURCES.find((s) => s.id === page.source)!.name })
           : page?.kind === "deleteAccount"
-            ? "Delete your account"
+            ? t("settings.deleteTitle")
             : null;
   const backToTab = () => setPage(null);
 
@@ -77,42 +78,42 @@ export function SettingsDialog({ open, onOpenChange, tab, onTabChange, account, 
         if (!next) setPage(null);
         onOpenChange(next);
       }}
-      title="Settings"
+      title={t("settings.title")}
       size="xl"
       hideHeader
     >
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div className="flex shrink-0 flex-col gap-0.5 border-b border-border bg-bg p-2.5 md:w-52.5 md:border-r md:border-b-0 md:py-4.5">
           <div className="flex items-center justify-between px-2.5 pb-2 md:pb-3.5">
-            <span className="text-[15px] font-semibold">Settings</span>
+            <span className="text-[15px] font-semibold">{t("settings.title")}</span>
             <RadixDialog.Close asChild>
-              <IconButton label="Close settings" className="md:hidden">
+              <IconButton label={t("settings.close")} className="md:hidden">
                 <X size={16} />
               </IconButton>
             </RadixDialog.Close>
           </div>
           <div className="flex gap-0.5 overflow-x-auto md:flex-col">
-            {TABS.map((t) => (
+            {TABS.map((tabInfo) => (
               <button
-                key={t.id}
+                key={tabInfo.id}
                 type="button"
-                aria-current={tab === t.id ? "page" : undefined}
-                onClick={() => changeTab(t.id)}
+                aria-current={tab === tabInfo.id ? "page" : undefined}
+                onClick={() => changeTab(tabInfo.id)}
                 // A real border, not a ring: the list scrolls sideways on phones, and a ring
                 // (drawn outside the box) gets clipped at the list's edges.
                 className={clsx(
                   "flex shrink-0 cursor-pointer items-center gap-2.5 rounded-md border px-2.5 py-2 text-left text-[13px]",
-                  tab === t.id
+                  tab === tabInfo.id
                     ? "border-border bg-surface font-medium text-text"
                     : "border-transparent text-muted hover:bg-sunken hover:text-text",
                 )}
               >
-                <span aria-hidden="true">{t.icon}</span>
-                {t.label}
+                <span aria-hidden="true">{tabInfo.icon}</span>
+                {tabInfo.label}
               </button>
             ))}
           </div>
-          <p className="mt-auto hidden px-2.5 pt-4 text-[11px] text-muted md:block">Settings marked "this browser" stay on this device.</p>
+          <p className="mt-auto hidden px-2.5 pt-4 text-[11px] text-muted md:block">{t("settings.browserOnlyNote")}</p>
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -130,7 +131,7 @@ export function SettingsDialog({ open, onOpenChange, tab, onTabChange, account, 
               <h2 className="text-lg font-semibold">{pageTitle ?? current.label}</h2>
             </div>
             <RadixDialog.Close asChild>
-              <IconButton label="Close settings" className="hidden md:grid">
+              <IconButton label={t("settings.close")} className="hidden md:grid">
                 <X size={16} />
               </IconButton>
             </RadixDialog.Close>
@@ -161,31 +162,31 @@ function GeneralTab() {
   const settings = useSettings();
   return (
     <div>
-      <SettingRow label="Appearance" hint="Follows your system unless you choose.">
+      <SettingRow label={t("settings.appearance")} hint={t("settings.appearanceHint")}>
         <SegmentedControl
-          label="Appearance"
+          label={t("settings.appearance")}
           value={settings.theme}
           options={[
-            { value: "system", label: "System" },
-            { value: "light", label: "Light" },
-            { value: "dark", label: "Dark" },
+            { value: "system", label: t("settings.system") },
+            { value: "light", label: t("settings.light") },
+            { value: "dark", label: t("settings.dark") },
           ]}
           onChange={(theme) => updateSettings({ theme })}
         />
       </SettingRow>
-      <SettingRow label="Density" hint="Compact fits more items on screen.">
+      <SettingRow label={t("settings.density")} hint={t("settings.densityHint")}>
         <Select
-          label="Density"
+          label={t("settings.density")}
           value={settings.density}
           options={[
-            ["comfortable", "Comfortable"],
-            ["compact", "Compact"],
+            ["comfortable", t("settings.comfortable")],
+            ["compact", t("settings.compact")],
           ]}
           onChange={(density) => updateSettings({ density })}
         />
       </SettingRow>
-      <SettingRow label="Colored item tiles" hint="Colored initials. Real site icons would tell a third party which sites you use.">
-        <Switch label="Colored item tiles" checked={settings.colorfulTiles} onChange={(colorfulTiles) => updateSettings({ colorfulTiles })} />
+      <SettingRow label={t("settings.coloredTiles")} hint={t("settings.coloredTilesHint")}>
+        <Switch label={t("settings.coloredTiles")} checked={settings.colorfulTiles} onChange={(colorfulTiles) => updateSettings({ colorfulTiles })} />
       </SettingRow>
     </div>
   );
@@ -195,28 +196,28 @@ function SecurityTab({ onChangePassword }: { onChangePassword: () => void }) {
   const settings = useSettings();
   return (
     <div>
-      <SettingRow label="Lock after" hint="Without activity. Closing the tab always locks. This browser only.">
+      <SettingRow label={t("settings.lockAfter")} hint={t("settings.lockAfterHint")}>
         <Select
-          label="Lock after"
+          label={t("settings.lockAfter")}
           value={settings.autoLockMinutes}
-          options={AUTO_LOCK_CHOICES.map((m) => [m, m < 60 ? `${m} minute${m === 1 ? "" : "s"}` : `${m / 60} hour${m === 60 ? "" : "s"}`])}
+          options={AUTO_LOCK_CHOICES.map((m) => [m, m < 60 ? t("time.minutes", { count: m }) : t("time.hours", { count: m / 60 })])}
           onChange={(autoLockMinutes) => updateSettings({ autoLockMinutes })}
         />
       </SettingRow>
-      <SettingRow label="Clear clipboard after" hint="Applies to everything you copy. This browser only.">
+      <SettingRow label={t("settings.clearClipboard")} hint={t("settings.clearClipboardHint")}>
         <Select
-          label="Clear clipboard after"
+          label={t("settings.clearClipboard")}
           value={settings.clipboardClearSeconds}
-          options={CLIPBOARD_CLEAR_CHOICES.map((s) => [s, s < 60 ? `${s} seconds` : `${s / 60} minute${s === 60 ? "" : "s"}`])}
+          options={CLIPBOARD_CLEAR_CHOICES.map((s) => [s, s < 60 ? t("time.seconds", { count: s }) : t("time.minutes", { count: s / 60 })])}
           onChange={(clipboardClearSeconds) => updateSettings({ clipboardClearSeconds })}
         />
       </SettingRow>
-      <SettingRow label="Lock when this tab is hidden" hint="Stricter: switching tabs or apps locks the vault. This browser only.">
-        <Switch label="Lock when this tab is hidden" checked={settings.lockWhenHidden} onChange={(lockWhenHidden) => updateSettings({ lockWhenHidden })} />
+      <SettingRow label={t("settings.lockWhenHidden")} hint={t("settings.lockWhenHiddenHint")}>
+        <Switch label={t("settings.lockWhenHidden")} checked={settings.lockWhenHidden} onChange={(lockWhenHidden) => updateSettings({ lockWhenHidden })} />
       </SettingRow>
-      <SettingRow label="Master password" hint="Changing it logs out your other devices. Your items aren't re-encrypted, so it's quick.">
+      <SettingRow label={t("common.masterPassword")} hint={t("settings.masterPasswordHint")}>
         <Button variant="secondary" onClick={onChangePassword}>
-          Change…
+          {t("settings.change")}
         </Button>
       </SettingRow>
     </div>
@@ -241,32 +242,32 @@ function AccountTab({ account, onOpenPlans, onDelete }: { account: AccountRespon
   return (
     <div className="grid gap-7">
       <div>
-        <SettingRow label="Email" hint={email} />
-        <SettingRow label="Plan" hint={<PlanSummary planName={PLANS[plan].name} subscription={sub ?? null} />}>
+        <SettingRow label={t("common.email")} hint={email} />
+        <SettingRow label={t("settings.plan")} hint={<PlanSummary planName={PLANS[plan].name} subscription={sub ?? null} />}>
           {sub && sub.status !== "canceled" ? (
             <Button variant="secondary" onClick={() => void manage()}>
-              Manage subscription
+              {t("settings.manageSubscription")}
             </Button>
           ) : (
-            plan !== "unlimited" && <Button onClick={onOpenPlans}>{plan === "free" ? "Get pass1 Plus" : "See plans"}</Button>
+            plan !== "unlimited" && <Button onClick={onOpenPlans}>{plan === "free" ? t("settings.getPlus") : t("settings.seePlans")}</Button>
           )}
         </SettingRow>
         {sub?.status === "past_due" && (
           <Alert tone="warning">
-            Your last payment didn't go through. Paddle will try again; update your card under Manage subscription to keep {PLANS[sub.plan].name}.
+            {t("settings.paymentFailed", { plan: PLANS[sub.plan].name })}
           </Alert>
         )}
         {error && <Outcome tone="danger">{error}</Outcome>}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger-line px-4 py-3.5">
         <div className="grid gap-0.5">
-          <span className="font-medium text-danger">Delete account</span>
+          <span className="font-medium text-danger">{t("settings.deleteAccount")}</span>
           <span className="text-xs text-muted">
-            Deletes your vault from pass1 for good{sub && sub.status !== "canceled" ? " and cancels your subscription" : ""}. Export it first if you want a copy.
+            {sub && sub.status !== "canceled" ? t("settings.deleteAccountHintWithSubscription") : t("settings.deleteAccountHint")}
           </span>
         </div>
         <Button variant="danger" onClick={onDelete}>
-          Delete account…
+          {t("settings.deleteAccountButton")}
         </Button>
       </div>
     </div>
@@ -278,11 +279,11 @@ const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 /** "pass1 Plus · yearly · renews 1 Oct 2027", or when it ends. */
 function PlanSummary({ planName, subscription }: { planName: string; subscription: BillingStatusResponse["subscription"] }) {
   if (!subscription || subscription.status === "canceled") return <>{planName}</>;
-  const period = subscription.interval === "year" ? "yearly" : "monthly";
+  const period = subscription.interval === "year" ? t("plan.yearly") : t("plan.monthly");
   const when = subscription.cancelsAt
-    ? `ends ${dateFormat.format(subscription.cancelsAt)}`
+    ? t("plan.ends", { date: dateFormat.format(subscription.cancelsAt) })
     : subscription.currentPeriodEndsAt
-      ? `renews ${dateFormat.format(subscription.currentPeriodEndsAt)}`
+      ? t("plan.renews", { date: dateFormat.format(subscription.currentPeriodEndsAt) })
       : null;
   return <>{[planName, period, when].filter(Boolean).join(" · ")}</>;
 }

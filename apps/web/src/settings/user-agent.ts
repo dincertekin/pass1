@@ -1,9 +1,11 @@
+import { t } from "../lib/i18n";
+
 /**
  * "Chrome on macOS" from a User-Agent string, for the Devices list. Deliberately simple:
  * it only has to help someone recognize their own devices.
  */
 export function describeUserAgent(ua: string | null): string {
-  if (!ua) return "Unknown device";
+  if (!ua) return t("devices.unknownDevice");
 
   const browser =
     /Edg\//.test(ua) ? "Edge"
@@ -11,7 +13,7 @@ export function describeUserAgent(ua: string | null): string {
     : /Firefox\//.test(ua) ? "Firefox"
     : /Chrome\//.test(ua) ? "Chrome"
     : /Safari\//.test(ua) ? "Safari"
-    : "Unknown browser";
+    : t("devices.unknownBrowser");
 
   const os =
     /iPhone|iPad|iPod/.test(ua) ? "iOS"
@@ -21,7 +23,7 @@ export function describeUserAgent(ua: string | null): string {
     : /Linux/.test(ua) ? "Linux"
     : null;
 
-  return os ? `${browser} on ${os}` : browser;
+  return os ? t("devices.browserOnOs", { browser, os }) : browser;
 }
 
 /** Phones and tablets get a phone icon in the Devices list. */

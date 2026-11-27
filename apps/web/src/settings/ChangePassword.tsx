@@ -5,6 +5,7 @@ import { PasswordField } from "../components/ui/TextField";
 import { MIN_MASTER_PASSWORD_SCORE, usePasswordStrength } from "../lib/password-strength";
 import { errorMessage, useSession } from "../session/session";
 import { FormActions, FormIntro, Outcome } from "./layout";
+import { t } from "../lib/i18n";
 
 /** Shown inside Settings, in place of the Security tab, so no second window opens. */
 export function ChangePasswordForm({ email, onDone }: { email: string; onDone: () => void }) {
@@ -39,9 +40,9 @@ export function ChangePasswordForm({ email, onDone }: { email: string; onDone: (
   if (done) {
     return (
       <div className="grid gap-4">
-        <Outcome tone="success">Master password changed. Your other devices were logged out.</Outcome>
+        <Outcome tone="success">{t("changePassword.done")}</Outcome>
         <FormActions>
-          <Button onClick={onDone}>Done</Button>
+          <Button onClick={onDone}>{t("common.done")}</Button>
         </FormActions>
       </div>
     );
@@ -49,38 +50,38 @@ export function ChangePasswordForm({ email, onDone }: { email: string; onDone: (
 
   return (
     <form onSubmit={handleSubmit} className="grid max-w-md gap-4">
-      <FormIntro>Your other devices will be logged out. Your items aren't re-encrypted, so this is quick at any vault size.</FormIntro>
+      <FormIntro>{t("changePassword.intro")}</FormIntro>
       {/* Lets password managers know which account this form is for. */}
       <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />
       <PasswordField
-        label="Current master password"
+        label={t("changePassword.current")}
         autoComplete="current-password"
         autoFocus
         value={current}
         onChange={(e) => setCurrent(e.target.value)}
       />
       <PasswordField
-        label="New master password"
+        label={t("changePassword.new")}
         autoComplete="new-password"
         value={next}
         onChange={(e) => setNext(e.target.value)}
         hint={next && <StrengthMeter strength={strength} />}
       />
       <PasswordField
-        label="Confirm new master password"
+        label={t("changePassword.confirm")}
         autoComplete="new-password"
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
         aria-invalid={mismatch}
-        hint={mismatch && <p className="text-xs text-danger">Passwords don't match.</p>}
+        hint={mismatch && <p className="text-xs text-danger">{t("createVault.mismatch")}</p>}
       />
       {error && <Outcome tone="danger">{error}</Outcome>}
       <FormActions>
         <Button variant="secondary" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={!canSubmit}>
-          {busy ? "Changing…" : "Change master password"}
+          {busy ? t("changePassword.changing") : t("settings.changePasswordTitle")}
         </Button>
       </FormActions>
     </form>

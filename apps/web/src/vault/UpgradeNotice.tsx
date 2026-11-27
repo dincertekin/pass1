@@ -5,6 +5,7 @@ import { Button } from "../components/ui/Button";
 import { IconButton } from "../components/ui/IconButton";
 import { loadBilling, UPGRADE_PENDING_KEY } from "../lib/billing";
 import { useSession } from "../session/session";
+import { t } from "../lib/i18n";
 
 // Shown after coming back from Paddle's checkout. The page reloads on the way back (so the vault
 // locks and is unlocked again), and Paddle's webhook can arrive a few seconds after the payment,
@@ -54,18 +55,18 @@ export function UpgradeNotice({ userId, plan }: { userId: string; plan: PlanId }
       {upgraded ? (
         <>
           <CheckCircle2 size={18} className="shrink-0 text-success" aria-hidden="true" />
-          <span className="flex-1">Welcome to {PLANS[plan].name}. Thanks for supporting pass1.</span>
+          <span className="flex-1">{t("upgrade.welcome", { plan: PLANS[plan].name })}</span>
         </>
       ) : (
         <>
           <Clock size={18} className="shrink-0 text-muted" aria-hidden="true" />
-          <span className="flex-1">Thanks! We're confirming your payment with Paddle. This usually takes less than a minute.</span>
+          <span className="flex-1">{t("upgrade.confirming")}</span>
           <Button variant="secondary" size="sm" onClick={() => void checkAgain()} disabled={checking}>
-            {checking ? "Checking…" : "Check again"}
+            {checking ? t("upgrade.checking") : t("upgrade.checkAgain")}
           </Button>
         </>
       )}
-      <IconButton label="Dismiss" onClick={dismiss}>
+      <IconButton label={t("upgrade.dismiss")} onClick={dismiss}>
         <X size={16} />
       </IconButton>
     </div>

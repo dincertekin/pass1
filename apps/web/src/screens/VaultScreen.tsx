@@ -23,6 +23,7 @@ import { NewItemButton, PhoneHeader, PhoneTabBar } from "../vault/PhoneNav";
 import { Sidebar } from "../vault/Sidebar";
 import { UpgradeNotice } from "../vault/UpgradeNotice";
 import { useVault, VaultProvider } from "../vault/vault-store";
+import { t } from "../lib/i18n";
 
 export function VaultScreen({ account, vaultKey }: { account: AccountResponse; vaultKey: CryptoKey }) {
   return (
@@ -110,7 +111,7 @@ function Vault({ account, vaultKey }: { account: AccountResponse; vaultKey: Cryp
         <div className="grid max-w-sm gap-3">
           <Alert>{loadError}</Alert>
           <Button variant="secondary" onClick={() => void reload()}>
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       </main>
@@ -130,8 +131,8 @@ function Vault({ account, vaultKey }: { account: AccountResponse; vaultKey: Cryp
       <Search size={16} className="shrink-0 text-muted" aria-hidden="true" />
       <input
         type="search"
-        placeholder={`Search ${counts.all} item${counts.all === 1 ? "" : "s"}`}
-        aria-label="Search vault"
+        placeholder={t("list.search", { count: counts.all })}
+        aria-label={t("list.searchLabel")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted"
@@ -262,12 +263,12 @@ function Vault({ account, vaultKey }: { account: AccountResponse; vaultKey: Cryp
         }}
       />
       <PlansDialog open={plansOpen} onOpenChange={setPlansOpen} currentPlan={account.user.plan} userId={account.user.id} />
-      <Dialog open={generatorOpen} onOpenChange={setGeneratorOpen} title="Password generator" size="sm">
+      <Dialog open={generatorOpen} onOpenChange={setGeneratorOpen} title={t("generator.title")} size="sm">
         <div className="overflow-y-auto px-5 pt-2 pb-5">
           <GeneratorPanel
             action="copy"
             onUse={(value) => {
-              void copySecret(value, "Password");
+              void copySecret(value, t("item.password"));
               setGeneratorOpen(false);
             }}
           />

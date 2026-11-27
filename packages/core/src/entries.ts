@@ -1,4 +1,5 @@
 import type { VaultItem } from "@pass1/crypto";
+import type { MessageKey } from "./i18n/translate";
 
 // Vault entries as every app holds them once decrypted, and small helpers for showing them.
 
@@ -16,11 +17,12 @@ export interface VaultEntry {
 
 export type Section = "all" | "favorites" | "health" | "trash";
 
-export const SECTION_LABELS: Record<Section, string> = {
-  all: "All items",
-  favorites: "Favorites",
-  health: "Password health",
-  trash: "Trash",
+/** Each section's name, as a message key (see i18n/en.ts). */
+export const SECTION_MESSAGES: Record<Section, MessageKey> = {
+  all: "section.all",
+  favorites: "section.favorites",
+  health: "section.health",
+  trash: "section.trash",
 };
 
 /** `hasHealthIssue`: the item's password is weak or reused (see health.ts). */
@@ -40,12 +42,14 @@ export function matchesQuery(entry: VaultEntry, query: string): boolean {
   return [name, url, username].some((field) => field.toLowerCase().includes(q));
 }
 
-export function displayName(entry: VaultEntry): string {
-  return entry.item?.name || "Unreadable item";
+/** Input: an entry. Output: its name, or null when it couldn't be decrypted (each app shows its own words for that). */
+export function displayName(entry: VaultEntry): string | null {
+  return entry.item?.name || null;
 }
 
+/** For sorting by name, A to Z, ignoring case. Unreadable items come first. */
 export function sortByName(a: VaultEntry, b: VaultEntry): number {
-  return displayName(a).localeCompare(displayName(b), undefined, { sensitivity: "base" });
+  return (displayName(a) ?? "").localeCompare(displayName(b) ?? "", undefined, { sensitivity: "base" });
 }
 
 /**

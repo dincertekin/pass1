@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { Dialog as RadixDialog } from "radix-ui";
 import type { ReactNode } from "react";
 import { IconButton } from "./IconButton";
+import { t } from "../../lib/i18n";
 
 const sizes = {
   sm: "md:max-w-sm",
@@ -47,7 +48,7 @@ export function Dialog({ open, onOpenChange, title, description, size = "md", hi
                 {description && <RadixDialog.Description className="text-[13px] text-muted">{description}</RadixDialog.Description>}
               </div>
               <RadixDialog.Close asChild>
-                <IconButton label="Close">
+                <IconButton label={t("common.close")}>
                   <X size={16} />
                 </IconButton>
               </RadixDialog.Close>

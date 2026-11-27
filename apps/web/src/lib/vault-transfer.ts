@@ -2,6 +2,7 @@ import { createExport, decryptItem, encryptItem, newItemId, openExport, type Vau
 import { exportFileSchema } from "@pass1/shared";
 import { fetchChangesSince } from "@pass1/core";
 import { api, ApiRequestError } from "./api";
+import { t } from "./i18n";
 
 // Export: decrypt every item here, then encrypt them all into one file with the export password.
 // Import: the reverse, re-encrypting each item with this vault's key under a new ID.
@@ -28,7 +29,7 @@ export async function exportVault(vaultKey: CryptoKey, password: string): Promis
 
 export class InvalidExportFileError extends Error {
   constructor() {
-    super("This isn't a pass1 export file, or it's damaged.");
+    super(t("import.notPass1Export"));
     this.name = "InvalidExportFileError";
   }
 }

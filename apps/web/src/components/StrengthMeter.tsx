@@ -1,12 +1,13 @@
 import { clsx } from "clsx";
+import { t } from "../lib/i18n";
 import type { PasswordStrength } from "../lib/password-strength";
 
 const levels = [
-  { label: "Very weak", bar: "bg-danger", text: "text-danger" },
-  { label: "Weak", bar: "bg-danger", text: "text-danger" },
-  { label: "Fair", bar: "bg-warning", text: "text-warning" },
-  { label: "Good", bar: "bg-success", text: "text-success" },
-  { label: "Strong", bar: "bg-success", text: "text-success" },
+  { label: t("strength.veryWeak"), bar: "bg-danger", text: "text-danger" },
+  { label: t("strength.weak"), bar: "bg-danger", text: "text-danger" },
+  { label: t("strength.fair"), bar: "bg-warning", text: "text-warning" },
+  { label: t("strength.good"), bar: "bg-success", text: "text-success" },
+  { label: t("strength.strong"), bar: "bg-success", text: "text-success" },
 ];
 
 /** Four bars plus a word, so strength never depends on color alone. */
@@ -22,7 +23,7 @@ export function StrengthMeter({ strength }: { strength: PasswordStrength | null 
         ))}
       </div>
       <div className="flex justify-between gap-2 text-xs">
-        <span className={clsx("font-medium", level?.text ?? "text-muted")}>{level ? level.label : "Strength"}</span>
+        <span className={clsx("font-medium", level?.text ?? "text-muted")}>{level ? level.label : t("strength.label")}</span>
         {strength?.warning && <span className="text-right text-muted">{strength.warning}</span>}
       </div>
     </div>

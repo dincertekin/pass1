@@ -10,8 +10,10 @@ import type { AccountResponse } from "@pass1/shared";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiRequestError } from "../lib/api";
 import { desktop } from "../lib/desktop";
+import { t } from "../lib/i18n";
 import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
+import { ImportFileError } from "@pass1/core";
 
 // Who is logged in, and whether the vault is open.
 //
@@ -153,7 +155,9 @@ export function useSession() {
 
 /** Turns any error from the actions above into a sentence for the user. */
 export function errorMessage(err: unknown): string {
-  if (err instanceof DecryptionError) return "Master password is incorrect.";
-  if (err instanceof ApiRequestError) return err.message;
-  return "Something went wrong. Try again.";
+  if (err instanceof DecryptionError) return t("common.wrongMasterPassword");
+  // Failures the app noticed itself have a message key; the server's own explanations are text.
+  if (err instanceof ApiRequestError) return err.messageKey ? t(err.messageKey) : err.message;
+  if (err instanceof ImportFileError) return t(err.messageKey);
+  return t("common.somethingWentWrong");
 }

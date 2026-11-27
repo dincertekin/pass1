@@ -9,4 +9,4 @@ pass1 is open source and free to host yourself. A hosted service with these plan
 | Monthly | | $2.49 | $4.49 |
 | Features | Everything in the vault | + TOTP codes, breach report, file attachments | + emergency access, priority support |
 
-Defined in one file, [packages/shared/src/plans.ts](../packages/shared/src/plans.ts). The paid features in the last row aren't built yet (see the [roadmap](../README.md#roadmap)).
+Prices and limits are defined in one file, [packages/shared/src/plans.ts](../packages/shared/src/plans.ts), where the server enforces them. The feature lists people read are in [packages/core/src/plan-features.ts](../packages/core/src/plan-features.ts), as translatable messages. The paid features in the last row aren't built yet (see the [roadmap](../README.md#roadmap)).

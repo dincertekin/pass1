@@ -2,6 +2,7 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IconButton } from "../components/ui/IconButton";
 import { copySecret } from "../lib/clipboard";
+import { t } from "../lib/i18n";
 
 /** Copies a value and clears the clipboard after the delay set in Settings. */
 export function CopyButton({ value, label, what }: { value: string; label: string; what: string }) {
@@ -19,7 +20,7 @@ export function CopyButton({ value, label, what }: { value: string; label: strin
   }
 
   return (
-    <IconButton label={copied ? "Copied" : label} onClick={copy} className={copied ? "text-success" : undefined}>
+    <IconButton label={copied ? t("common.copied") : label} onClick={copy} className={copied ? "text-success" : undefined}>
       {copied ? <Check size={16} /> : <Copy size={16} />}
     </IconButton>
   );

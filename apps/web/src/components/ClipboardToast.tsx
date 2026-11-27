@@ -1,5 +1,6 @@
 import { Toast } from "radix-ui";
 import { clearNow, dismissCleared, useClipboardState } from "../lib/clipboard";
+import { t } from "../lib/i18n";
 
 /**
  * "Password copied · clears in 23s". Radix announces it to screen readers.
@@ -10,10 +11,10 @@ export function ClipboardToast() {
 
   const message =
     state.status === "counting"
-      ? `${state.label} copied · clears in ${state.secondsLeft}s`
+      ? t("clipboard.copied", { what: state.label, seconds: state.secondsLeft })
       : state.status === "waitingForFocus"
-        ? `${state.label} is still in the clipboard. It clears when you return to pass1.`
-        : "Clipboard cleared";
+        ? t("clipboard.stillThere", { what: state.label })
+        : t("clipboard.cleared");
 
   return (
     <Toast.Provider swipeDirection="down">
@@ -25,9 +26,9 @@ export function ClipboardToast() {
       >
         <Toast.Description className="tabular-nums">{message}</Toast.Description>
         {state.status === "counting" && (
-          <Toast.Action altText="Clear the clipboard now" asChild>
+          <Toast.Action altText={t("clipboard.clearNowLabel")} asChild>
             <button type="button" onClick={() => void clearNow()} className="cursor-pointer font-medium underline-offset-2 hover:underline">
-              Clear now
+              {t("clipboard.clearNow")}
             </button>
           </Toast.Action>
         )}

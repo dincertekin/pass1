@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { PasswordField } from "../components/ui/TextField";
 import { errorMessage, useSession } from "../session/session";
 import { FormActions, Outcome } from "./layout";
+import { t, tx } from "../lib/i18n";
 
 /** Shown inside Settings, in place of the Account tab, so no second window opens. */
 export function DeleteAccountForm({ email, onCancel }: { email: string; onCancel: () => void }) {
@@ -28,10 +29,10 @@ export function DeleteAccountForm({ email, onCancel }: { email: string; onCancel
   return (
     <form onSubmit={handleSubmit} className="grid max-w-md gap-4">
       <Alert>
-        This deletes <strong>{email}</strong> and every item in the vault, on every device. It can't be undone, and pass1 can't recover it.
+        {tx("deleteAccount.warning", { email: <strong>{email}</strong> })}
       </Alert>
       <PasswordField
-        label="Master password"
+        label={t("common.masterPassword")}
         autoComplete="current-password"
         autoFocus
         value={password}
@@ -40,10 +41,10 @@ export function DeleteAccountForm({ email, onCancel }: { email: string; onCancel
       {error && <Outcome tone="danger">{error}</Outcome>}
       <FormActions>
         <Button variant="secondary" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" variant="danger" disabled={!password || busy}>
-          {busy ? "Deleting…" : "Delete account"}
+          {busy ? t("deleteAccount.deleting") : t("settings.deleteAccount")}
         </Button>
       </FormActions>
     </form>

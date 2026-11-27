@@ -5,6 +5,7 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { PasswordField, TextField } from "../components/ui/TextField";
 import { errorMessage, useSession } from "../session/session";
+import { t } from "../lib/i18n";
 
 export function LoginScreen() {
   const { logIn } = useSession();
@@ -27,13 +28,13 @@ export function LoginScreen() {
 
   return (
     <AuthLayout
-      title="Log in to pass1"
-      subtitle="Your vault is decrypted on this device."
+      title={t("login.title")}
+      subtitle={t("login.subtitle")}
       footer={
         <>
-          New to pass1?{" "}
+          {t("login.newHere")}{" "}
           <Link to="/register" className="font-medium text-accent hover:underline">
-            Create an account
+            {t("login.createAccount")}
           </Link>
         </>
       }
@@ -41,7 +42,7 @@ export function LoginScreen() {
       <form onSubmit={handleSubmit} className="grid gap-4">
         {error && <Alert>{error}</Alert>}
         <TextField
-          label="Email"
+          label={t("common.email")}
           type="email"
           autoComplete="username"
           required
@@ -49,14 +50,14 @@ export function LoginScreen() {
           onChange={(e) => setEmail(e.target.value)}
         />
         <PasswordField
-          label="Master password"
+          label={t("common.masterPassword")}
           autoComplete="current-password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <Button type="submit" size="lg" disabled={busy}>
-          {busy ? "Unlocking vault…" : "Log in"}
+          {busy ? t("common.unlockingVault") : t("common.logIn")}
         </Button>
         {busy && <SlowOnPurpose />}
       </form>
@@ -67,8 +68,6 @@ export function LoginScreen() {
 /** Shown while Argon2 runs, so the wait reads as protection and not as lag. */
 export function SlowOnPurpose() {
   return (
-    <p className="text-center text-xs text-muted">
-      Deriving your key with Argon2id. This takes a moment on purpose: it makes guessing your password slow.
-    </p>
+    <p className="text-center text-xs text-muted">{t("common.slowOnPurpose")}</p>
   );
 }

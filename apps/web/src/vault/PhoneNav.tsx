@@ -2,7 +2,8 @@ import { clsx } from "clsx";
 import { Activity, Dices, Lock, Plus, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSession } from "../session/session";
-import { SECTION_LABELS, type Section } from "@pass1/core";
+import { SECTION_MESSAGES, type Section } from "@pass1/core";
+import { t } from "../lib/i18n";
 
 // Phone-only parts of the vault: the header with filter chips, the floating New button and the
 // tab bar at the bottom, where thumbs reach. Hidden from md up, where the sidebar takes over.
@@ -15,22 +16,22 @@ export function PhoneHeader({ section, counts, onSectionChange, search }: {
 }) {
   const { lock } = useSession();
   const chips: { id: Section; label: string; warn?: boolean }[] = [
-    { id: "all", label: "All" },
-    { id: "favorites", label: "Favorites" },
-    ...(counts.health > 0 ? [{ id: "health" as const, label: `${counts.health} to fix`, warn: true }] : []),
-    { id: "trash", label: "Trash" },
+    { id: "all", label: t("nav.all") },
+    { id: "favorites", label: t("section.favorites") },
+    ...(counts.health > 0 ? [{ id: "health" as const, label: t("nav.toFix", { count: counts.health }), warn: true }] : []),
+    { id: "trash", label: t("section.trash") },
   ];
 
   return (
     <header className="flex flex-col gap-3 bg-surface px-4 pt-5 pb-2.5 md:hidden">
       <div className="flex items-center justify-between">
-        <h1 className="text-[28px] font-bold tracking-tight">{section === "all" ? "Vault" : SECTION_LABELS[section]}</h1>
-        <button type="button" onClick={lock} aria-label="Lock now" className="grid size-11 cursor-pointer place-items-center rounded-full bg-sunken">
+        <h1 className="text-[28px] font-bold tracking-tight">{section === "all" ? t("nav.vault") : t(SECTION_MESSAGES[section])}</h1>
+        <button type="button" onClick={lock} aria-label={t("account.lockNow")} className="grid size-11 cursor-pointer place-items-center rounded-full bg-sunken">
           <Lock size={18} />
         </button>
       </div>
       {search}
-      <div role="group" aria-label="Filter" className="flex gap-2 overflow-x-auto">
+      <div role="group" aria-label={t("nav.filter")} className="flex gap-2 overflow-x-auto">
         {chips.map((chip) => (
           <button
             key={chip.id}
@@ -59,7 +60,7 @@ export function NewItemButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label="New item"
+      aria-label={t("list.newItem")}
       className="fixed right-[max(18px,env(safe-area-inset-right))] bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 grid size-14 cursor-pointer place-items-center rounded-2xl bg-accent text-on-accent shadow-pop md:hidden"
     >
       <Plus size={22} strokeWidth={2.4} />
@@ -75,13 +76,13 @@ export function PhoneTabBar({ active, onVault, onGenerator, onHealth, onSettings
   onSettings: () => void;
 }) {
   const tabs = [
-    { id: "vault", label: "Vault", icon: <Lock size={21} />, onClick: onVault },
-    { id: "generator", label: "Generator", icon: <Dices size={21} />, onClick: onGenerator },
-    { id: "health", label: "Health", icon: <Activity size={21} />, onClick: onHealth },
-    { id: "settings", label: "Settings", icon: <Settings size={21} />, onClick: onSettings },
+    { id: "vault", label: t("nav.vault"), icon: <Lock size={21} />, onClick: onVault },
+    { id: "generator", label: t("nav.generator"), icon: <Dices size={21} />, onClick: onGenerator },
+    { id: "health", label: t("nav.health"), icon: <Activity size={21} />, onClick: onHealth },
+    { id: "settings", label: t("account.settings"), icon: <Settings size={21} />, onClick: onSettings },
   ];
   return (
-    <nav aria-label="Main" className="flex border-t border-border bg-bg px-1.5 pb-[max(10px,env(safe-area-inset-bottom))] md:hidden">
+    <nav aria-label={t("nav.main")} className="flex border-t border-border bg-bg px-1.5 pb-[max(10px,env(safe-area-inset-bottom))] md:hidden">
       {tabs.map((tab) => (
         <button
           key={tab.id}

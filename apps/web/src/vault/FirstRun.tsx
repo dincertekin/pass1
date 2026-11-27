@@ -2,6 +2,7 @@ import { Check, Dices, Download, Lock, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { updateSettings, useSettings } from "../lib/settings";
 import { tileStyle } from "./tiles";
+import { t } from "../lib/i18n";
 
 // What a new account sees instead of an empty list. Most people switch password managers
 // because importing is easy, so importing comes first.
@@ -14,10 +15,10 @@ export function FirstRun({ itemCount, onImport, onAdd, onGenerate }: {
 }) {
   const { onboarding } = useSettings();
   const steps = [
-    { label: "Create your account", done: true },
-    { label: "Import or add 5 passwords", done: itemCount >= 5 },
-    { label: "Store your master password somewhere safe offline", done: onboarding.storedMasterPassword, key: "storedMasterPassword" as const },
-    { label: "Log in on your phone", done: onboarding.loggedInOnPhone, key: "loggedInOnPhone" as const },
+    { label: t("firstRun.stepAccount"), done: true },
+    { label: t("firstRun.stepImport"), done: itemCount >= 5 },
+    { label: t("firstRun.stepStore"), done: onboarding.storedMasterPassword, key: "storedMasterPassword" as const },
+    { label: t("firstRun.stepPhone"), done: onboarding.loggedInOnPhone, key: "loggedInOnPhone" as const },
   ];
   const doneCount = steps.filter((s) => s.done).length;
 
@@ -26,21 +27,18 @@ export function FirstRun({ itemCount, onImport, onAdd, onGenerate }: {
       <div className="flex w-full max-w-205 flex-col gap-8">
         <header className="flex flex-col gap-2.5">
           <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success-soft py-1 pr-3 pl-2 text-xs font-semibold text-success">
-            <Lock size={14} aria-hidden="true" /> Your vault is encrypted on this device
+            <Lock size={14} aria-hidden="true" /> {t("firstRun.encrypted")}
           </span>
-          <h1 className="text-[28px] font-bold tracking-tight text-balance md:text-[34px]">Welcome to pass1. Let's fill your vault.</h1>
-          <p className="max-w-[60ch] text-[15px] text-muted">
-            Most people start by importing from the browser or the password manager they already use. It takes about a minute, and pass1
-            never sees your passwords in plain text.
-          </p>
+          <h1 className="text-[28px] font-bold tracking-tight text-balance md:text-[34px]">{t("firstRun.title")}</h1>
+          <p className="max-w-[60ch] text-[15px] text-muted">{t("firstRun.intro")}</p>
         </header>
 
         <div className="grid gap-3.5 md:grid-cols-3">
           <StartCard
             primary
             icon={<Download size={20} />}
-            title="Import passwords"
-            text="From Chrome, Safari, Bitwarden, 1Password or a CSV file."
+            title={t("firstRun.import")}
+            text={t("firstRun.importText")}
             onClick={onImport}
           >
             <span className="mt-1 flex gap-1.5" aria-hidden="true">
@@ -52,15 +50,15 @@ export function FirstRun({ itemCount, onImport, onAdd, onGenerate }: {
               <span className="grid size-6.5 place-items-center rounded-md bg-sunken text-[11px] font-semibold text-muted">csv</span>
             </span>
           </StartCard>
-          <StartCard icon={<Plus size={20} />} title="Add a login" text="Type in one account by hand. Your email is a good first one." onClick={onAdd} />
-          <StartCard icon={<Dices size={20} />} title="Generate a password" text="Changing a weak password today? Make a strong one here." onClick={onGenerate} />
+          <StartCard icon={<Plus size={20} />} title={t("firstRun.add")} text={t("firstRun.addText")} onClick={onAdd} />
+          <StartCard icon={<Dices size={20} />} title={t("firstRun.generate")} text={t("firstRun.generateText")} onClick={onGenerate} />
         </div>
 
-        <section aria-label="Getting started" className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface px-5 py-4.5">
+        <section aria-label={t("firstRun.gettingStarted")} className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface px-5 py-4.5">
           <div className="flex items-center justify-between">
-            <span className="font-semibold">Getting started</span>
+            <span className="font-semibold">{t("firstRun.gettingStarted")}</span>
             <span className="text-xs text-muted">
-              {doneCount} of {steps.length} done
+              {t("firstRun.progress", { done: doneCount, total: steps.length })}
             </span>
           </div>
           <div className="h-1 rounded-full bg-sunken" aria-hidden="true">

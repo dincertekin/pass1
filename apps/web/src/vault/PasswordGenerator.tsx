@@ -7,6 +7,7 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { IconButton } from "../components/ui/IconButton";
 import { updateSettings, useSettings } from "../lib/settings";
+import { t } from "../lib/i18n";
 
 type Generator = typeof import("@pass1/crypto/generator");
 
@@ -16,7 +17,7 @@ export function PasswordGenerator({ onUse }: { onUse: (value: string) => void })
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <IconButton label="Generate password">
+        <IconButton label={t("generator.generate")}>
           <Dices size={16} />
         </IconButton>
       </Popover.Trigger>
@@ -76,7 +77,7 @@ export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: strin
 
   return (
     <div className="grid gap-4">
-      <div className="flex rounded-md border border-border bg-sunken p-0.5" role="group" aria-label="Kind">
+      <div className="flex rounded-md border border-border bg-sunken p-0.5" role="group" aria-label={t("generator.kind")}>
         {(["password", "passphrase"] as const).map((k) => (
           <button
             key={k}
@@ -88,7 +89,7 @@ export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: strin
               kind === k ? "bg-surface font-medium text-text shadow-sm" : "text-muted",
             )}
           >
-            {k}
+            {k === "password" ? t("generator.kindPassword") : t("generator.kindPassphrase")}
           </button>
         ))}
       </div>
@@ -98,14 +99,14 @@ export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: strin
           <output aria-live="polite" className="min-w-0 flex-1 font-mono text-[13px] break-all">
             {value || " "}
           </output>
-          <IconButton label="Generate another" onClick={regenerate}>
+          <IconButton label={t("generator.another")} onClick={regenerate}>
             <RefreshCw size={16} />
           </IconButton>
         </div>
         <div className="flex items-center justify-between text-xs text-muted">
-          <span className="tabular-nums">{Math.round(bits)} bits of entropy</span>
+          <span className="tabular-nums">{t("generator.entropy", { bits: Math.round(bits) })}</span>
           <Badge tone={bits >= 80 ? "success" : bits >= 60 ? "warning" : "danger"}>
-            {bits >= 80 ? "Strong" : bits >= 60 ? "Fair" : "Weak"}
+            {bits >= 80 ? t("strength.strong") : bits >= 60 ? t("strength.fair") : t("strength.weak")}
           </Badge>
         </div>
       </div>
@@ -113,7 +114,7 @@ export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: strin
       {kind === "password" ? (
         <div className="grid gap-3">
           <Slider
-            label="Length"
+            label={t("generator.length")}
             value={passwordOptions.length}
             min={PASSWORD_LENGTH.min}
             max={64}
@@ -126,7 +127,7 @@ export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: strin
             <Check label="!@#$%" checked={passwordOptions.symbols} disabled={isLastSet("symbols")} onChange={(symbols) => setPassword({ symbols })} />
           </div>
           <Check
-            label="Avoid look-alikes (I l 1 O 0 o)"
+            label={t("generator.avoidLookAlikes")}
             checked={passwordOptions.avoidAmbiguous}
             onChange={(avoidAmbiguous) => setPassword({ avoidAmbiguous })}
           />
@@ -134,34 +135,36 @@ export function GeneratorPanel({ onUse, action = "use" }: { onUse: (value: strin
       ) : (
         <div className="grid gap-3">
           <Slider
-            label="Words"
+            label={t("generator.words")}
             value={passphraseOptions.words}
             min={PASSPHRASE_WORDS.min}
             max={PASSPHRASE_WORDS.max}
             onChange={(words) => setPassphrase({ words })}
           />
           <label className="flex items-center justify-between gap-2 text-[13px]">
-            Separator
+            {t("generator.separator")}
             <select
               value={passphraseOptions.separator}
               onChange={(e) => setPassphrase({ separator: e.target.value as PassphraseOptions["separator"] })}
               className="h-7 rounded-sm border border-border-strong bg-surface px-1.5 font-mono text-[13px]"
             >
-              <option value="-">- hyphen</option>
-              <option value=" ">␣ space</option>
-              <option value=".">. period</option>
-              <option value="_">_ underscore</option>
+              <option value="-">{t("generator.hyphen")}</option>
+              <option value=" ">{t("generator.space")}</option>
+              <option value=".">{t("generator.period")}</option>
+              <option value="_">{t("generator.underscore")}</option>
             </select>
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <Check label="Capitalize" checked={passphraseOptions.capitalize} onChange={(capitalize) => setPassphrase({ capitalize })} />
-            <Check label="Add a number" checked={passphraseOptions.includeNumber} onChange={(includeNumber) => setPassphrase({ includeNumber })} />
+            <Check label={t("generator.capitalize")} checked={passphraseOptions.capitalize} onChange={(capitalize) => setPassphrase({ capitalize })} />
+            <Check label={t("generator.addNumber")} checked={passphraseOptions.includeNumber} onChange={(includeNumber) => setPassphrase({ includeNumber })} />
           </div>
         </div>
       )}
 
       <Button size="lg" disabled={!value} onClick={() => onUse(value)}>
-        {action === "copy" ? `Copy ${kind}` : `Use this ${kind}`}
+        {action === "copy"
+          ? t(kind === "password" ? "item.copyPassword" : "generator.copyPassphrase")
+          : t(kind === "password" ? "generator.usePassword" : "generator.usePassphrase")}
       </Button>
     </div>
   );

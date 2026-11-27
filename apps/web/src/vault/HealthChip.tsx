@@ -1,13 +1,14 @@
 import { clsx } from "clsx";
 import type { ItemHealth } from "@pass1/core";
+import { t } from "../lib/i18n";
 
 /** "Reused", "Weak", "Good" or "Strong". Reuse wins: it's the bigger risk even for a strong password. */
 export function healthLabel(health: ItemHealth | undefined): { text: string; tone: "danger" | "warning" | "success" } | null {
   if (!health) return null;
-  if (health.reusedWith.length > 0) return { text: "Reused", tone: "warning" };
-  if (health.strength === "weak") return { text: "Weak", tone: "danger" };
-  if (health.strength === "good") return { text: "Good", tone: "success" };
-  if (health.strength === "strong") return { text: "Strong", tone: "success" };
+  if (health.reusedWith.length > 0) return { text: t("health.reused"), tone: "warning" };
+  if (health.strength === "weak") return { text: t("strength.weak"), tone: "danger" };
+  if (health.strength === "good") return { text: t("strength.good"), tone: "success" };
+  if (health.strength === "strong") return { text: t("strength.strong"), tone: "success" };
   return null;
 }
 

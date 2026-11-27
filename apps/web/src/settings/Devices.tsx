@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import { errorMessage } from "../session/session";
 import { Outcome, SettingRow } from "./layout";
 import { describeUserAgent, isPhone } from "./user-agent";
+import { t } from "../lib/i18n";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -37,7 +38,7 @@ export function DevicesTab() {
     }
   }
 
-  if (sessions === null && !error) return <p className="py-4 text-[13px] text-muted">Loading…</p>;
+  if (sessions === null && !error) return <p className="py-4 text-[13px] text-muted">{t("common.loading")}</p>;
   const others = sessions?.filter((s) => !s.current) ?? [];
 
   return (
@@ -56,13 +57,13 @@ export function DevicesTab() {
                 {s.deviceName ?? describeUserAgent(s.userAgent)}
               </span>
             }
-            hint={<span className="pl-11.5">Last active {dateFormat.format(s.lastUsedAt)}</span>}
+            hint={<span className="pl-11.5">{t("devices.lastActive", { date: dateFormat.format(s.lastUsedAt) })}</span>}
           >
             {s.current ? (
-              <Badge tone="accent">This device</Badge>
+              <Badge tone="accent">{t("devices.thisDevice")}</Badge>
             ) : (
               <Button variant="secondary" size="sm" onClick={() => run(() => api.revokeSession(s.id))}>
-                Log out
+                {t("common.logOut")}
               </Button>
             )}
           </SettingRow>
@@ -71,7 +72,7 @@ export function DevicesTab() {
       {others.length > 0 && (
         <div className="pt-4">
           <Button variant="danger" onClick={() => run(() => api.revokeOtherSessions())}>
-            Log out all other devices
+            {t("devices.logOutOthers")}
           </Button>
         </div>
       )}

@@ -4,11 +4,13 @@ import type { KeyboardEvent, RefObject } from "react";
 import { Button } from "../components/ui/Button";
 import { useSettings } from "../lib/settings";
 import { MOD_KEY } from "../lib/shortcuts";
-import { displayName, hostOf, SECTION_LABELS, type Section } from "@pass1/core";
+import { hostOf, SECTION_MESSAGES, type Section } from "@pass1/core";
 import type { ItemHealth } from "@pass1/core";
 import { HealthChip } from "./HealthChip";
 import { ItemAvatar } from "./ItemAvatar";
 import type { VaultEntry } from "@pass1/core";
+import { t } from "../lib/i18n";
+import { itemName } from "./item-name";
 
 export function ItemList({ entries, total, health, section, query, onQueryChange, selectedId, onSelect, onOpen, onNew, searchRef }: {
   entries: VaultEntry[];
@@ -43,7 +45,7 @@ export function ItemList({ entries, total, health, section, query, onQueryChange
   }
 
   return (
-    <section aria-label="Items" className="flex min-h-0 min-w-0 flex-1 flex-col border-border bg-surface md:border-r">
+    <section aria-label={t("list.items")} className="flex min-h-0 min-w-0 flex-1 flex-col border-border bg-surface md:border-r">
       {/* Phones have their own search in PhoneHeader, so this row is desktop only. */}
       <div className="hidden gap-2 border-b border-border p-3 md:flex">
         <label className="flex h-8.5 flex-1 items-center gap-2 rounded-md border border-border-strong bg-surface px-2.5 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft">
@@ -51,8 +53,8 @@ export function ItemList({ entries, total, health, section, query, onQueryChange
           <input
             ref={searchRef}
             type="search"
-            placeholder={`Search ${total} item${total === 1 ? "" : "s"}`}
-            aria-label="Search vault"
+            placeholder={t("list.search", { count: total })}
+            aria-label={t("list.searchLabel")}
             autoComplete="off"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
@@ -65,16 +67,16 @@ export function ItemList({ entries, total, health, section, query, onQueryChange
             display class would otherwise win over `hidden`. */}
         {section !== "trash" && (
           <div className="hidden md:block">
-            <Button onClick={onNew} aria-label="New item" className="h-8.5">
-              <Plus size={15} strokeWidth={2.4} /> New
+            <Button onClick={onNew} aria-label={t("list.newItem")} className="h-8.5">
+              <Plus size={15} strokeWidth={2.4} /> {t("list.new")}
             </Button>
           </div>
         )}
       </div>
 
       <div className="hidden items-baseline justify-between px-4 pt-3.5 pb-1.5 md:flex">
-        <h2 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{query ? "Search results" : SECTION_LABELS[section]}</h2>
-        <span className="text-xs text-muted">A–Z</span>
+        <h2 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{query ? t("list.searchResults") : t(SECTION_MESSAGES[section])}</h2>
+        <span className="text-xs text-muted">{t("list.sortedByName")}</span>
       </div>
 
       <div role="listbox" aria-label="Vault items" className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2 pb-2">
@@ -96,14 +98,14 @@ export function ItemList({ entries, total, health, section, query, onQueryChange
             >
               <ItemAvatar entry={entry} />
               <span className="min-w-0">
-                <span className="block truncate font-medium">{displayName(entry)}</span>
+                <span className="block truncate font-medium">{itemName(entry)}</span>
                 <span className="block truncate text-xs text-muted">
                   {entry.item?.username || hostOf(entry.item?.url) || " "}
                 </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <HealthChip health={health.get(entry.id)} problemsOnly />
-                {entry.item?.favorite && <Star size={12} className="fill-accent text-accent" aria-label="Favorite" />}
+                {entry.item?.favorite && <Star size={12} className="fill-accent text-accent" aria-label={t("list.favorite")} />}
               </span>
             </button>
           ))
@@ -115,13 +117,13 @@ export function ItemList({ entries, total, health, section, query, onQueryChange
 
 function EmptyList({ section, query }: { section: Section; query: string }) {
   const message = query
-    ? `No items match "${query}".`
+    ? t("list.noMatches", { query })
     : section === "trash"
-      ? "Trash is empty."
+      ? t("list.trashEmpty")
       : section === "favorites"
-        ? "Star an item to keep it here."
+        ? t("list.noFavorites")
         : section === "health"
-          ? "Nothing to fix. No weak or reused passwords."
-          : "Your vault is empty.";
+          ? t("list.nothingToFix")
+          : t("list.vaultEmpty");
   return <p className="px-3 py-8 text-center text-[13px] text-muted">{message}</p>;
 }

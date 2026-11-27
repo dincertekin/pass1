@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { useSettings } from "../lib/settings";
-import { displayName } from "@pass1/core";
+import { itemName } from "./item-name";
 import { tileStyle } from "./tiles";
 import type { VaultEntry } from "@pass1/core";
 
@@ -19,7 +19,7 @@ export function ItemAvatar({ entry, size = "md" }: { entry: VaultEntry; size?: k
       </span>
     );
   }
-  const name = displayName(entry);
+  const name = itemName(entry);
   return (
     <span aria-hidden="true" className={clsx("grid shrink-0 place-items-center font-semibold", sizes[size])} style={tileStyle(name, colorfulTiles)}>
       {name.charAt(0).toUpperCase()}

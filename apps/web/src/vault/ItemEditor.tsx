@@ -9,6 +9,7 @@ import { errorMessage } from "../session/session";
 import { PasswordGenerator } from "./PasswordGenerator";
 import type { VaultEntry } from "@pass1/core";
 import { useVault } from "./vault-store";
+import { t } from "../lib/i18n";
 
 /** Creates a new item when `entry` is null, otherwise edits it. */
 export function ItemEditor({ entry, onSaved, onCancel }: {
@@ -59,9 +60,9 @@ export function ItemEditor({ entry, onSaved, onCancel }: {
     <form onSubmit={handleSubmit} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-5 md:px-9 md:py-7">
       <div className="mx-auto grid w-full max-w-220 content-start gap-4">
         <Button variant="ghost" size="sm" onClick={onCancel} className="self-start md:hidden">
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={14} /> {t("common.back")}
         </Button>
-        <h2 className="text-lg font-semibold">{entry ? "Edit item" : "New item"}</h2>
+        <h2 className="text-lg font-semibold">{entry ? t("editor.editItem") : t("editor.newItem")}</h2>
 
         {error && (
           <Alert>
@@ -70,29 +71,29 @@ export function ItemEditor({ entry, onSaved, onCancel }: {
               {/* Reloading throws away this edit, so it stays the user's choice. */}
               {error.conflict && (
                 <Button variant="secondary" size="sm" onClick={() => void vault.reload().then(onCancel)}>
-                  Reload
+                  {t("editor.reload")}
                 </Button>
               )}
             </div>
           </Alert>
         )}
 
-        <TextField label="Name" required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="GitHub" />
+        <TextField label={t("item.name")} required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t("editor.namePlaceholder")} />
         <TextField
-          label="Username"
+          label={t("item.username")}
           autoComplete="off"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
         <PasswordField
-          label="Password"
+          label={t("item.password")}
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           actions={<PasswordGenerator onUse={setPassword} />}
         />
         <TextField
-          label="Website"
+          label={t("item.website")}
           type="text"
           inputMode="url"
           autoComplete="off"
@@ -100,14 +101,14 @@ export function ItemEditor({ entry, onSaved, onCancel }: {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="github.com"
         />
-        <TextAreaField label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <TextAreaField label={t("item.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
         <div className="flex justify-end gap-2 border-t border-border pt-4">
           <Button variant="secondary" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={busy || !name.trim()}>
-            {busy ? "Saving…" : "Save"}
+            {busy ? t("editor.saving") : t("common.save")}
           </Button>
         </div>
       </div>

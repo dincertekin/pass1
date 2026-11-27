@@ -3,6 +3,7 @@ import { decryptItem, encryptItem, newItemId, type VaultItem } from "@pass1/cryp
 import { storedSize, type VaultItemResponse } from "@pass1/shared";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
+import { t } from "../lib/i18n";
 
 // The decrypted vault, held in memory while it's unlocked. When the vault locks, the screen
 // that owns this provider unmounts and the plaintext goes with it.
@@ -52,7 +53,7 @@ export function VaultProvider({ vaultKey, children }: { vaultKey: CryptoKey; chi
       setLoadError(null);
     } catch {
       // A failed refresh in the background keeps the vault on screen; it tries again next time.
-      if (!hasLoaded.current) setLoadError("Couldn't load your vault. Check your connection and try again.");
+      if (!hasLoaded.current) setLoadError(t("vault.loadFailed"));
     }
   }, [vaultKey]);
 

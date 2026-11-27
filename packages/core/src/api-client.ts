@@ -21,17 +21,25 @@ import {
   type UpdateItemRequest,
 } from "@pass1/shared";
 import type { z } from "zod";
+import { englishText } from "./i18n/english";
+import type { MessageKey } from "./i18n/translate";
 
 // Typed client for the pass1 API, shared by every app. Every response is checked against the
 // shared schema, so the rest of the app can trust the types. That includes the KDF settings: a
 // server that tried to send weak Argon2 settings (to make the password easier to crack) is
 // rejected here.
 
+/**
+ * A request failed. `message` is the server's explanation, or for failures the client noticed
+ * itself (no connection, a malformed answer) English text with `messageKey` for the app to show
+ * in its language.
+ */
 export class ApiRequestError extends Error {
   constructor(
     readonly status: number,
     readonly code: ErrorCode,
     message: string,
+    readonly messageKey?: MessageKey,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -77,7 +85,7 @@ async function sendRequest<T>(context: RequestContext, method: string, path: str
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiRequestError(0, "INTERNAL", "Can't reach pass1. Check your connection and try again.");
+    throw new ApiRequestError(0, "INTERNAL", englishText("errors.offline"), "errors.offline");
   }
 
   if (!res.ok) {
@@ -86,12 +94,12 @@ async function sendRequest<T>(context: RequestContext, method: string, path: str
       if (parsed.data.error.code === "UNAUTHENTICATED") context.onSessionEnded();
       throw new ApiRequestError(res.status, parsed.data.error.code, parsed.data.error.message);
     }
-    throw new ApiRequestError(res.status, "INTERNAL", "The server sent an unexpected response.");
+    throw new ApiRequestError(res.status, "INTERNAL", englishText("errors.unexpectedResponse"), "errors.unexpectedResponse");
   }
 
   if (!schema) return undefined as T;
   const parsed = schema.safeParse(await res.json().catch(() => null));
-  if (!parsed.success) throw new ApiRequestError(res.status, "INTERNAL", "The server sent an unexpected response.");
+  if (!parsed.success) throw new ApiRequestError(res.status, "INTERNAL", englishText("errors.unexpectedResponse"), "errors.unexpectedResponse");
   return parsed.data;
 }
 

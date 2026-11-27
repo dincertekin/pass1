@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { Eye, EyeOff } from "lucide-react";
 import { useId, useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { t } from "../../lib/i18n";
 
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   label: string;
@@ -51,7 +52,7 @@ export function PasswordField({
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={visible ? t("item.hidePassword") : t("item.showPassword")}
           className="grid size-7 cursor-pointer place-items-center rounded-sm text-muted hover:bg-sunken hover:text-text"
         >
           <Icon size={16} />

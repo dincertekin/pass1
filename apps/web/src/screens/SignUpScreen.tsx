@@ -7,15 +7,16 @@ import { TextField } from "../components/ui/TextField";
 import { api } from "../lib/api";
 import { solveSignUpPuzzle } from "../lib/proof-of-work";
 import { errorMessage } from "../session/session";
+import { t, tx } from "../lib/i18n";
 
 // Step 1 of creating an account: only the email. The server always answers the same way,
 // so this page says "check your inbox" whether or not the email already has an account.
 
 const LOGIN_FOOTER = (
   <>
-    Already have an account?{" "}
+    {t("signup.haveAccount")}{" "}
     <Link to="/login" className="font-medium text-accent hover:underline">
-      Log in
+      {t("common.logIn")}
     </Link>
   </>
 );
@@ -42,15 +43,12 @@ export function SignUpScreen() {
 
   if (sentTo) {
     return (
-      <AuthLayout title="Check your inbox" footer={LOGIN_FOOTER}>
+      <AuthLayout title={t("signup.checkInbox")} footer={LOGIN_FOOTER}>
         <div className="grid gap-4 text-[13px]">
-          <p>
-            We sent an email to <strong>{sentTo}</strong>. Open the link in it to choose your master password.
-            The link works for one hour.
-          </p>
-          <p className="text-muted">Nothing there after a few minutes? Check your spam folder, or send it again.</p>
+          <p>{tx("signup.sent", { email: <strong>{sentTo}</strong> })}</p>
+          <p className="text-muted">{t("signup.nothingThere")}</p>
           <Button variant="secondary" onClick={() => setSentTo(null)}>
-            Send it again
+            {t("signup.sendAgain")}
           </Button>
         </div>
       </AuthLayout>
@@ -58,12 +56,12 @@ export function SignUpScreen() {
   }
 
   return (
-    <AuthLayout title="Create your vault" subtitle="Start with your email. We'll send you a link to continue." footer={LOGIN_FOOTER}>
+    <AuthLayout title={t("signup.title")} subtitle={t("signup.subtitle")} footer={LOGIN_FOOTER}>
       <form onSubmit={handleSubmit} className="grid gap-4">
         {error && <Alert>{error}</Alert>}
-        <TextField label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <TextField label={t("common.email")} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Button type="submit" size="lg" disabled={busy || email.trim() === ""}>
-          {busy ? "Sending…" : "Continue"}
+          {busy ? t("signup.sending") : t("signup.continue")}
         </Button>
       </form>
     </AuthLayout>
