@@ -12,3 +12,7 @@ data/
 playwright-report/
 test-results/
 backups/
+
+# The desktop app's packaging output
+apps/desktop/out/
+apps/desktop/build/

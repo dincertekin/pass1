@@ -9,6 +9,9 @@ ARG NODE_IMAGE=node:24.15.0-bookworm-slim
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 # Package files first, so `npm ci` is cached until a dependency changes.
+# The desktop app's Electron is a dev dependency of the workspace; the server never needs its
+# 100+ MB binary, so it's never downloaded here.
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/core/package.json packages/core/
 COPY packages/crypto/package.json packages/crypto/
@@ -16,6 +19,7 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/e2e/package.json apps/e2e/
+COPY apps/desktop/package.json apps/desktop/
 RUN npm ci
 COPY packages packages
 COPY apps/api apps/api
@@ -32,6 +36,7 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/e2e/package.json apps/e2e/
+COPY apps/desktop/package.json apps/desktop/
 RUN npm ci --omit=dev --workspace @pass1/api \
  # PGlite is only for development, but npm keeps it because drizzle-orm lists it as an optional
  # peer. (--omit=optional would also drop Argon2's native binaries, so remove just this one.)

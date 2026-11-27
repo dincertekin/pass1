@@ -78,17 +78,18 @@ The API was built for one browser on one origin. Native apps have no origin and 
 
 The cheapest native app, because it reuses the web build.
 
-- [ ] Electron loads the web build from inside the app through a custom protocol (for example `app://pass1`). It never loads remote pages.
-- [ ] Hardening, each item checked by a test or at startup:
+- [x] Electron loads the web build from inside the app through a custom protocol (`app://pass1`). It never loads remote pages.
+- [x] Hardening, each item checked by a test or at startup:
   - `contextIsolation` on, `sandbox` on, `nodeIntegration` off, no `remote` module.
-  - Electron fuses: no `RunAsNode`, no `NODE_OPTIONS`, ASAR integrity checked, cookie encryption on.
+  - Electron fuses: no `RunAsNode`, no `NODE_OPTIONS`, no `--inspect`, ASAR integrity checked and app code only from the archive, cookie encryption on. Set by `apps/desktop/package.mjs`.
   - Navigation and new windows blocked; links open in the system browser, `http` and `https` only.
-  - The same CSP as the web, with `connect-src` limited to the user's server.
-  - A tiny preload bridge exposing only what's needed (keychain, lock on sleep), each call validated.
-- [ ] Lock the vault when the computer sleeps or the screen locks.
+  - The same CSP as the web, now defined once in `@pass1/shared`. Stricter than planned: the page connects to nothing but its own files, because API requests go through the main process.
+  - A tiny preload bridge exposing two functions: send an API request (validated, kept inside the server's `/api`) and hear about locking. The session token stays in the main process, encrypted by the OS keychain, so the page never sees it.
+- [x] Lock the vault when the computer sleeps or the screen locks.
 - [ ] Optional unlock with Touch ID or Windows Hello (same design as Phase 4's biometric unlock).
-- [ ] Signed and notarized builds for macOS, signed for Windows, AppImage and `.deb` for Linux. Auto-update checks signatures before installing.
-- [ ] The heap test from the web e2e suite, run against the desktop app.
+- [ ] Signed and notarized builds for macOS, signed for Windows, AppImage and `.deb` for Linux. Auto-update checks signatures before installing. Unsigned builds for this computer's platform work today (`npm run package -w @pass1/desktop`); signing waits for paid certificates (decided 27 November 2026).
+- [x] The heap test from the web e2e suite, run against the desktop app.
+- [ ] A first-run screen to choose the server. Today the address comes from `PASS1_SERVER_URL` or `server.json` in the app's data folder.
 
 **Done when:** a signed build installs on all three systems, syncs with a vault made on the web, and passes the heap test.
 

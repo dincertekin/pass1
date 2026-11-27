@@ -65,7 +65,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
         working-directory: apps/e2e
-      - run: npm run test:e2e
+      # The desktop app's tests start Electron, which needs a display; xvfb provides a virtual one.
+      - run: xvfb-run --auto-servernum npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

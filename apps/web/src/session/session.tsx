@@ -9,6 +9,7 @@ import {
 import type { AccountResponse } from "@pass1/shared";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiRequestError } from "../lib/api";
+import { desktop } from "../lib/desktop";
 import { clearNow as clearClipboard } from "../lib/clipboard";
 import { deriveKeysInWorker } from "../lib/derive-keys";
 
@@ -65,6 +66,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void clearClipboard();
     setSession((current) => (current.status === "unlocked" ? { status: "locked", account: current.account } : current));
   }, []);
+
+  // In the desktop app: lock when the computer sleeps or its screen locks.
+  useEffect(() => desktop?.onLockRequested(lock), [lock]);
 
   const actions: SessionActions = {
     async register(signupToken, masterPassword) {

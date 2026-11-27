@@ -74,7 +74,7 @@ The latest security review, with every finding and accepted risk: [docs/security
 | Protects against | Does not protect against |
 |---|---|
 | Database leak or server breach | Malware or a keylogger on the user's device |
-| A malicious server operator reading vaults | A compromised server serving malicious JavaScript (a limit of every web-based password manager) |
+| A malicious server operator reading vaults | A compromised server serving malicious JavaScript (a limit of every web-based password manager; the desktop app ships its own code and isn't affected) |
 | Traffic interception | Weak master passwords (Argon2id slows guessing but can't prevent it) |
 | Guessing a master password through the login form, from one machine or many | A malicious server rolling an item back to an older version, or hiding an item |
 | Creating accounts in bulk cheaply: each sign-up costs about a second of computing | |
@@ -120,7 +120,8 @@ packages/core     What every app shares, without browser or React: API client, s
                   password health, importers
 apps/api          Fastify + TypeScript REST API, Drizzle ORM on Postgres (PGlite in development)
 apps/web          React + TypeScript + Vite client
-apps/e2e          Playwright end-to-end tests against the production build
+apps/desktop      Electron desktop app: the web build served from inside the app, hardened
+apps/e2e          Playwright end-to-end tests against the production build, web and desktop
 ```
 
 ## Getting started
@@ -132,6 +133,7 @@ npm install
 npm test            # run all tests
 npm run dev:api     # API on http://localhost:3000 (database in apps/api/data/pglite, no setup needed)
 npm run dev:web     # web app on http://localhost:5173
+npm run dev:desktop # the desktop app, against the API on localhost:3000 (start dev:api first)
 npm run mail:dev    # once: starts Mailpit in Docker, which catches sign-up emails (http://localhost:8025)
 npm run test:e2e    # builds, then runs the browser tests (uses your installed Google Chrome)
 ```

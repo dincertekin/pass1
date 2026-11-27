@@ -1,0 +1,27 @@
+{
+  "name": "@pass1/desktop",
+  "productName": "pass1",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "npm run build -w @pass1/web && node build.mjs && electron .",
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build -w @pass1/web && node build.mjs && node package.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pass1/shared": "*"
+  },
+  "devDependencies": {
+    "@electron/fuses": "2.1.3",
+    "@electron/packager": "20.3.0",
+    "@types/node": "^26.6.5",
+    "electron": "45.5.0",
+    "esbuild": "0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

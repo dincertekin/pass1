@@ -7,4 +7,5 @@ export * from "./account";
 export * from "./app-versions";
 export * from "./billing";
 export * from "./content-security-policy";
+export * from "./desktop-bridge";
 export * from "./proof-of-work";
