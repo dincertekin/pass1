@@ -100,6 +100,8 @@ test("stays logged in after a restart where the OS can encrypt the token, until 
 // The same promise as the web's heap test (security.spec.ts), in the desktop app's page. The main
 // process never sees the vault key or a decrypted item: it only passes ciphertext along.
 test("a locked desktop vault holds no keys or plaintext in memory", async ({ page }) => {
+  // Two heap snapshots plus Electron's startup: past 30 seconds when the suite runs in parallel.
+  test.slow();
   const itemPassword = "Zq-desktop-heap-marker-4418";
   const email = await registerNewAccount(page);
   const { app, desktopPage } = await launchDesktop(newUserDataDir());
