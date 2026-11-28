@@ -21,7 +21,7 @@ const PLACEHOLDER = /\{(\w+)\}/g;
  * Input: its messages and locale, e.g. (EN, "en"). Output: t("vault.search", { count: 3 }).
  */
 export function createTranslator(messages: Messages, locale: string) {
-  const plurals = new Intl.PluralRules(locale);
+  const plurals = pluralRulesFor(locale);
   return function t(key: MessageKey, params: MessageParams = {}): string {
     const message = messages[key];
     const text = typeof message === "string" ? message : pickPlural(message, plurals, params.count);
@@ -31,7 +31,22 @@ export function createTranslator(messages: Messages, locale: string) {
 
 export type Translate = ReturnType<typeof createTranslator>;
 
-function pickPlural(message: PluralMessage, plurals: Intl.PluralRules, count: string | number | undefined): string {
+type PluralRules = Pick<Intl.PluralRules, "select">;
+
+/**
+ * The language's plural rules. Trap: React Native's JavaScript engine (Hermes) has no
+ * Intl.PluralRules, and calling `new` on it crashed the phone app at startup. There the English
+ * rule is used ("one" for 1, "other" otherwise), which is right for English, the only language
+ * so far.
+ * TODO: before shipping a language with other plural forms on the phone, add real rules for it
+ * here (or a small polyfill), since this fallback would pick wrong forms.
+ */
+function pluralRulesFor(locale: string): PluralRules {
+  if (typeof Intl !== "undefined" && typeof Intl.PluralRules === "function") return new Intl.PluralRules(locale);
+  return { select: (count: number) => (count === 1 ? "one" : "other") };
+}
+
+function pickPlural(message: PluralMessage, plurals: PluralRules, count: string | number | undefined): string {
   const form = plurals.select(Number(count ?? 0)) as keyof PluralMessage;
   return message[form] ?? message.other;
 }

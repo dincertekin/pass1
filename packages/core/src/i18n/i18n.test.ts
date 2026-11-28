@@ -34,6 +34,18 @@ describe("Turning keys into text", () => {
     expect(t("list.search", { count: 0 })).toBe("Search 0 items");
   });
 
+  it("still works where the JavaScript engine has no Intl.PluralRules, like React Native's", () => {
+    const original = Intl.PluralRules;
+    (Intl as { PluralRules?: unknown }).PluralRules = undefined;
+    try {
+      const withoutPluralRules = createTranslator(EN, "en");
+      expect(withoutPluralRules("list.search", { count: 1 })).toBe("Search 1 item");
+      expect(withoutPluralRules("list.search", { count: 2 })).toBe("Search 2 items");
+    } finally {
+      (Intl as { PluralRules?: unknown }).PluralRules = original;
+    }
+  });
+
   it("leaves a placeholder visible when its value is missing, instead of printing undefined", () => {
     expect(t("signup.sent")).toContain("{email}");
   });
