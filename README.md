@@ -121,6 +121,7 @@ packages/core     What every app shares, without browser or React: API client, s
 apps/api          Fastify + TypeScript REST API, Drizzle ORM on Postgres (PGlite in development)
 apps/web          React + TypeScript + Vite client
 apps/desktop      Electron desktop app: the web build served from inside the app, hardened
+apps/mobile       Expo (React Native) phone app; modules/pass1-crypto holds its native crypto
 apps/e2e          Playwright end-to-end tests against the production build, web and desktop
 ```
 
@@ -134,6 +135,7 @@ npm test            # run all tests
 npm run dev:api     # API on http://localhost:3000 (database in apps/api/data/pglite, no setup needed)
 npm run dev:web     # web app on http://localhost:5173
 npm run dev:desktop # the desktop app, against the API on localhost:3000 (start dev:api first)
+npm run ios -w @pass1/mobile  # the phone app in the iOS Simulator (needs Xcode and CocoaPods)
 npm run mail:dev    # once: starts Mailpit in Docker, which catches sign-up emails (http://localhost:8025)
 npm run test:e2e    # builds, then runs the browser tests (uses your installed Google Chrome)
 ```

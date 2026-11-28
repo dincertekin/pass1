@@ -14,6 +14,7 @@ Everything below is done and tested. What's next is in the [roadmap](../README.m
 - [x] Config from env, validated at startup
 - [x] Auth: prelogin with fake salts for unknown emails, register, login, logout; hashed session tokens in an httpOnly, Secure, SameSite=Strict cookie
 - [x] Rate limits, security headers, Origin check on every request that changes data, per-account login throttle
+- [x] Phone app foundation (Expo SDK 58): our own native crypto module for iOS, passing every conformance check in the simulator
 - [x] Desktop app (Electron): the web build served from inside the app, the session token kept by the OS keychain and never shown to the page, locks on sleep, hardened and tested (including the heap test); unsigned builds for now
 - [x] Ready for several API servers: rate limits and the login block in Postgres (as keyed hashes, never readable IPs or emails), migrations one server at a time
 - [x] Apps that are too old for the server are asked to update (Pass1-Client header, 426)
